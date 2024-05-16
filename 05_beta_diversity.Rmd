@@ -1,0 +1,146 @@
+# Beta diversity
+
+```{r load_data_beta}
+load("data/data.Rdata")
+```
+
+```{r beta_div, comment="", message=FALSE, warning=FALSE}
+beta_q0n <- genome_counts_filt %>%
+  column_to_rownames(., "genome") %>%
+  filter(rowSums(. != 0, na.rm = TRUE) > 0) %>%
+  select_if(~!all(. == 0)) %>%
+  hillpair(., q = 0)
+
+beta_q1n <- genome_counts_filt %>%
+  column_to_rownames(., "genome") %>%
+  filter(rowSums(. != 0, na.rm = TRUE) > 0) %>%
+  select_if(~!all(. == 0)) %>%
+  hillpair(., q = 1)
+
+beta_q1p <- genome_counts_filt %>%
+  column_to_rownames(., "genome") %>%
+  filter(rowSums(. != 0, na.rm = TRUE) > 0) %>%
+  select_if(~!all(. == 0)) %>%
+  hillpair(., q = 1, tree = genome_tree)
+
+beta_q1f <- genome_counts_filt %>%
+  column_to_rownames(., "genome") %>%
+  filter(rowSums(. != 0, na.rm = TRUE) > 0) %>%
+  select_if(~!all(. == 0)) %>%
+  hillpair(., q = 1, dist = dist)
+```
+
+### Permanova
+
+```{r permanova, comment="", message=FALSE, warning=FALSE}
+#Richness
+betadisper(beta_q0n$C, sample_metadata$Origin) %>% permutest(., pairwise = TRUE) 
+adonis2(beta_q0n$C ~ Origin, 
+        data = sample_metadata %>% arrange(match(sample,labels(beta_q1n$C))), 
+        permutations = 999, 
+        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$C))) %>% pull(Location)) %>%
+        broom::tidy() %>%
+        tt()
+
+#Neutral diversity
+betadisper(beta_q1n$C, sample_metadata$Origin) %>% permutest(., pairwise = TRUE) 
+adonis2(beta_q1n$C ~ Origin, 
+        data = sample_metadata %>% arrange(match(sample,labels(beta_q1n$C))), 
+        permutations = 999, 
+        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$C))) %>% pull(Location)) %>%
+        broom::tidy() %>%
+        tt()
+
+#Phylogenetic diversity
+betadisper(beta_q1p$C, sample_metadata$Origin) %>% permutest(., pairwise = TRUE) 
+adonis2(beta_q1p$C ~ Origin, 
+        data = sample_metadata %>% arrange(match(sample,labels(beta_q1n$C))), 
+        permutations = 999, 
+        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$C))) %>% pull(Location)) %>%
+        broom::tidy() %>%
+        tt()
+
+#Functional diversity
+betadisper(beta_q1f$C, sample_metadata$Origin) %>% permutest(., pairwise = TRUE) 
+adonis2(beta_q1f$C ~ Origin, 
+        data = sample_metadata %>% arrange(match(sample,labels(beta_q1n$C))), 
+        permutations = 999, 
+        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$C))) %>% pull(Location)) %>%
+        broom::tidy() %>%
+        tt()
+```
+
+### Richness diversity plot
+
+```{r beta_div_nmds_neutral_plot, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
+beta_q0n$S %>%
+  vegan::metaMDS(., trymax = 500, k = 2, trace=0) %>%
+  vegan::scores() %>%
+  as_tibble(., rownames = "sample") %>%
+  dplyr::left_join(sample_metadata, by = join_by(sample == sample)) %>%
+  group_by(Origin,Location) %>%
+  mutate(x_cen = mean(NMDS1, na.rm = TRUE)) %>%
+  mutate(y_cen = mean(NMDS2, na.rm = TRUE)) %>%
+  ungroup() %>%
+  ggplot(aes(x = NMDS1, y = NMDS2, color = Origin, fill = Origin, shape = as.factor(Location))) +
+      scale_color_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          values=c("#6A9AC3","#F3B942")) +
+      scale_fill_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          values=c("#6A9AC350","#F3B94250")) +
+    geom_point(size = 4) +
+    #   stat_ellipse(aes(color = beta_q1n_nmds$Groups))+
+    geom_segment(aes(x = x_cen, y = y_cen, xend = NMDS1, yend = NMDS2), alpha = 0.9) +
+    theme_classic() +
+    theme(
+      axis.text.x = element_text(size = 12),
+      axis.text.y = element_text(size = 12),
+      axis.title = element_text(size = 20, face = "bold"),
+      axis.text = element_text(face = "bold", size = 18),
+      panel.background = element_blank(),
+      axis.line = element_line(size = 0.5, linetype = "solid", colour = "black"),
+      legend.text = element_text(size = 16),
+      legend.title = element_text(size = 18),
+      legend.position = "right", legend.box = "vertical"
+    ) +
+    labs(shape="Individual")
+```
+
+
+### Neutral diversity plot
+
+```{r beta_div_nmds_phylo_plot, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
+beta_q1n$S %>%
+  vegan::metaMDS(., trymax = 500, k = 2, trace=0) %>%
+  vegan::scores() %>%
+  as_tibble(., rownames = "sample") %>%
+  dplyr::left_join(sample_metadata, by = join_by(sample == sample)) %>%
+  group_by(Origin,Location) %>%
+  mutate(x_cen = mean(NMDS1, na.rm = TRUE)) %>%
+  mutate(y_cen = mean(NMDS2, na.rm = TRUE)) %>%
+  ungroup() %>%
+  ggplot(aes(x = NMDS1, y = NMDS2, color = Origin, fill = Origin, shape = as.factor(Location))) +
+      scale_color_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          values=c("#6A9AC3","#F3B942")) +
+      scale_fill_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          values=c("#6A9AC350","#F3B94250")) +
+    geom_point(size = 4) +
+    #   stat_ellipse(aes(color = beta_q1n_nmds$Groups))+
+    geom_segment(aes(x = x_cen, y = y_cen, xend = NMDS1, yend = NMDS2), alpha = 0.9) +
+    theme_classic() +
+    theme(
+      axis.text.x = element_text(size = 12),
+      axis.text.y = element_text(size = 12),
+      axis.title = element_text(size = 20, face = "bold"),
+      axis.text = element_text(face = "bold", size = 18),
+      panel.background = element_blank(),
+      axis.line = element_line(size = 0.5, linetype = "solid", colour = "black"),
+      legend.text = element_text(size = 16),
+      legend.title = element_text(size = 18),
+      legend.position = "right", legend.box = "vertical"
+    ) +
+    labs(shape="Individual")
+```

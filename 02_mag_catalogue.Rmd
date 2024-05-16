@@ -1,0 +1,210 @@
+# MAG catalogue
+
+```{r load_data_mag}
+load("data/data.Rdata")
+```
+
+## Genome phylogeny
+
+```{r genome_phylogeny, message=FALSE, warning=FALSE, fig.height=10, fig.width=10, fig.fullwidth=TRUE}
+# Generate the phylum color heatmap
+phylum_heatmap <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
+    mutate(phylum=str_remove_all(phylum, "p__")) %>%
+    right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
+    arrange(match(genome, genome_tree$tip.label)) %>%
+    select(genome,phylum) %>%
+    mutate(phylum = factor(phylum, levels = unique(phylum))) %>%
+    column_to_rownames(var = "genome")
+
+# Generate  basal tree
+circular_tree <- force.ultrametric(genome_tree, method="extend") %>% # extend to ultrametric for the sake of visualisation
+    ggtree(., layout="fan", open.angle=10, size=0.5)
+
+# Add phylum ring
+circular_tree <- gheatmap(circular_tree, phylum_heatmap, offset=0.55, width=0.1, colnames=FALSE) +
+        scale_fill_manual(values=phylum_colors) +
+        geom_tiplab2(size=1, hjust=-0.1) +
+        theme(legend.position = "none", plot.margin = margin(0, 0, 0, 0), panel.margin = margin(0, 0, 0, 0))
+
+# Flush color scale to enable a new color scheme in the next ring
+circular_tree <- circular_tree + new_scale_fill()
+
+# Add completeness ring
+circular_tree <- circular_tree +
+        new_scale_fill() +
+        scale_fill_gradient(low = "#d1f4ba", high = "#f4baba") +
+        geom_fruit(
+                data=genome_metadata,
+                geom=geom_bar,
+                mapping = aes(x=completeness, y=genome, fill=contamination),
+                offset = 0.55,
+                orientation="y",
+              stat="identity")
+
+# Add genome-size ring
+circular_tree <-  circular_tree +
+        new_scale_fill() +
+        scale_fill_manual(values = "#cccccc") +
+        geom_fruit(
+             data=genome_metadata,
+             geom=geom_bar,
+             mapping = aes(x=length, y=genome),
+                 offset = 0.05,
+                 orientation="y",
+         stat="identity")
+
+# Add text
+circular_tree <-  circular_tree +
+        annotate('text', x=2.7, y=0, label='            Phylum', family='arial', size=3.5) +
+        annotate('text', x=3.1, y=0, label='                         Genome quality', family='arial', size=3.5) +
+        annotate('text', x=3.5, y=0, label='                     Genome size', family='arial', size=3.5)
+
+#Plot circular tree
+circular_tree %>% open_tree(30) %>% rotate_tree(90)
+```
+
+## Genome quality
+
+```{r genome_quality}
+tibble(Completeness=
+         paste0(round(genome_metadata$completeness %>% mean(),2),
+                "±",
+                round(genome_metadata$completeness %>% sd(),2)),
+       Contamination=
+           paste0(round(genome_metadata$contamination %>% mean(),2),
+                "±",
+                round(genome_metadata$contamination %>% sd(),2))) %>%
+  tt()
+```
+
+```{r genome_quality_plot, message=FALSE, warning=FALSE, fig.height=6, fig.width=10, fig.fullwidth=TRUE}
+
+#Generate quality biplot
+genome_biplot <- genome_metadata %>%
+  select(c(genome,phylum,completeness,contamination,length)) %>%
+  arrange(match(genome, rev(genome_tree$tip.label))) %>% #sort MAGs according to phylogenetic tree
+  ggplot(aes(x=completeness,y=contamination,size=length,color=phylum)) +
+              geom_point(alpha=0.7) +
+                    xlim(c(70,100)) +
+                    ylim(c(10,0)) +
+                    scale_color_manual(values=phylum_colors) +
+                    labs(y= "Contamination", x = "Completeness") +
+                    theme_classic() +
+                    theme(legend.position = "none")
+
+#Generate contamination boxplot
+genome_contamination <- genome_metadata %>%
+            ggplot(aes(y=contamination)) +
+                    ylim(c(10,0)) +
+                    geom_boxplot(colour = "#999999", fill="#cccccc") +
+                    theme_void() +
+                    theme(legend.position = "none",
+                        axis.title.x = element_blank(),
+                        axis.title.y = element_blank(),
+                        axis.text.y=element_blank(),
+                        axis.ticks.y=element_blank(),
+                        axis.text.x=element_blank(),
+                        axis.ticks.x=element_blank(),
+                        plot.margin = unit(c(0, 0, 0.40, 0),"inches")) #add bottom-margin (top, right, bottom, left)
+
+#Generate completeness boxplot
+genome_completeness <- genome_metadata %>%
+        ggplot(aes(x=completeness)) +
+                xlim(c(70,100)) +
+                geom_boxplot(colour = "#999999", fill="#cccccc") +
+                theme_void() +
+                theme(legend.position = "none",
+                    axis.title.x = element_blank(),
+                    axis.title.y = element_blank(),
+                    axis.text.y=element_blank(),
+                    axis.ticks.y=element_blank(),
+                    axis.text.x=element_blank(),
+                    axis.ticks.x=element_blank(),
+                    plot.margin = unit(c(0, 0, 0, 0.50),"inches")) #add left-margin (top, right, bottom, left)
+
+#Render composite figure
+grid.arrange(grobs = list(genome_completeness,genome_biplot,genome_contamination),
+        layout_matrix = rbind(c(1,1,1,1,1,1,1,1,1,1,1,4),
+                              c(2,2,2,2,2,2,2,2,2,2,2,3),
+                              c(2,2,2,2,2,2,2,2,2,2,2,3),
+                              c(2,2,2,2,2,2,2,2,2,2,2,3),
+                              c(2,2,2,2,2,2,2,2,2,2,2,3),
+                              c(2,2,2,2,2,2,2,2,2,2,2,3),
+                              c(2,2,2,2,2,2,2,2,2,2,2,3),
+                              c(2,2,2,2,2,2,2,2,2,2,2,3),
+                              c(2,2,2,2,2,2,2,2,2,2,2,3),
+                              c(2,2,2,2,2,2,2,2,2,2,2,3),
+                              c(2,2,2,2,2,2,2,2,2,2,2,3),
+                              c(2,2,2,2,2,2,2,2,2,2,2,3)))
+
+```
+
+
+## Functional overview
+
+```{r function_heatmap, message=FALSE, warning=FALSE, fig.height=10, fig.width=10, fig.fullwidth=TRUE}
+
+# Aggregate basal GIFT into elements
+function_table <- genome_gifts %>%
+    to.elements(., GIFT_db)
+
+# Generate  basal tree
+function_tree <- force.ultrametric(genome_tree, method="extend") %>%
+                ggtree(., size = 0.3) 
+
+#Add phylum colors next to the tree tips
+function_tree <- gheatmap(function_tree, phylum_heatmap, offset=0, width=0.1, colnames=FALSE) +
+            scale_fill_manual(values=phylum_colors) +
+            labs(fill="Phylum")
+
+#Reset fill scale to use a different colour profile in the heatmap
+function_tree <- function_tree + new_scale_fill()
+
+#Add functions heatmap
+function_tree <- gheatmap(function_tree, function_table, offset=0.5, width=3.5, colnames=FALSE) +
+            vexpand(.08) +
+            coord_cartesian(clip = "off") +
+            scale_fill_gradient(low = "#f4f4f4", high = "steelblue", na.value="white") +
+            labs(fill="GIFT")
+
+#Reset fill scale to use a different colour profile in the heatmap
+function_tree <- function_tree + new_scale_fill()
+
+# Add completeness barplots
+function_tree <- function_tree +
+            geom_fruit(data=genome_metadata,
+            geom=geom_bar,
+            grid.params=list(axis="x", text.size=2, nbreak = 1),
+            axis.params=list(vline=TRUE),
+            mapping = aes(x=length, y=genome, fill=completeness),
+                 offset = 3.8,
+                 orientation="y",
+                 stat="identity") +
+            scale_fill_gradient(low = "#cf8888", high = "#a2cc87") +
+            labs(fill="Genome\ncompleteness")
+
+function_tree
+```
+
+## Functional ordination
+
+```{r function_ordination, message=FALSE, fig.height=8, fig.width=10, fig.fullwidth=TRUE}
+# Generate the tSNE ordination
+tSNE_function <- Rtsne(X=function_table, dims = 2, check_duplicates = FALSE)
+
+# Plot the ordination
+function_ordination <- tSNE_function$Y %>%
+                as.data.frame() %>%
+                mutate(genome=rownames(function_table)) %>%
+                inner_join(genome_metadata, by="genome") %>%
+                rename(tSNE1="V1", tSNE2="V2") %>%
+                select(genome,phylum,tSNE1,tSNE2, length) %>%
+                ggplot(aes(x = tSNE1, y = tSNE2, color = phylum, size=length))+
+                            geom_point(shape=16, alpha=0.7) +
+                            scale_color_manual(values=phylum_colors) +
+                            theme_minimal() +
+                labs(color="Phylum", size="Genome size") +
+                guides(color = guide_legend(override.aes = list(size = 5))) # enlarge Phylum dots in legend
+
+function_ordination
+```

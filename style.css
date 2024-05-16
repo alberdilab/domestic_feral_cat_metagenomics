@@ -1,0 +1,86 @@
+p.caption {
+  color: #777;
+  margin-top: 10px;
+}
+p code {
+  white-space: inherit;
+}
+pre {
+  word-break: normal;
+  word-wrap: normal;
+}
+pre code {
+  white-space: inherit;
+}
+
+.header-section-number{
+  color: #a52929;
+}
+
+/*-----Body Links-------*/
+/*https://rstudio4edu.github.io/rstudio4edu-book/book-fancy.html*/
+
+.book .book-body .page-wrapper .page-inner section.normal a {
+  color: #a52929;
+}
+
+.book .book-body .page-wrapper .page-inner section.normal a:hover {
+color: #d65454; /* darker color when hovering */
+text-decoration: none;
+}
+
+/*-----TOC links-------*/
+
+.book .book-summary ul.summary li a:link {
+  color: #444444;
+}
+
+.book .book-summary ul.summary li a:visited {
+  color: #444444;
+}
+
+.book .book-summary ul.summary li a:hover {
+  color: #a52929; /* darker color when hovering */
+  text-decoration: none;
+}
+
+.book .book-summary ul.summary li.active>a { /*active TOC links*/
+  color: #d65454 !important;
+  font-weight: bold;
+}
+
+/*--- LOGO ---*/
+
+.toc-logo {
+  width: 230px !important;
+  object-fit: contain;
+  margin: 0 auto;
+  display: block;
+}
+
+.toc-logo img {
+  max-width: 100%;
+  margin-top: 10px;
+}
+
+.summary > li:first-child {
+  height: auto !important;
+}
+
+/*--- CODE chunks ---*/
+
+.script-source {
+  font-weight: bold !important;
+  border-left: 3px solid #d65454 !important;
+}
+
+
+.script-output {
+  background-color: #ffffff !important;
+}
+
+/*--- Titles ---*/
+
+.title {
+  color: #a52929;
+}

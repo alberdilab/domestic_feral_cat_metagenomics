@@ -1,0 +1,172 @@
+# Community composition
+
+```{r load_data_community}
+load("data/data.Rdata")
+```
+
+## Taxonomy overview 
+
+### Stacked barplot
+
+```{r taxonomy_barplot, fig.height=6, fig.width=10, fig.fullwidth=TRUE}
+genome_counts_filt %>%
+  mutate_at(vars(-genome),~./sum(.)) %>% #apply TSS nornalisation
+  pivot_longer(-genome, names_to = "sample", values_to = "count") %>% #reduce to minimum number of columns
+  left_join(., genome_metadata, by = join_by(genome == genome)) %>% #append genome metadata
+  left_join(., sample_metadata, by = join_by(sample == sample)) %>% #append sample metadata
+  filter(count > 0) %>% #filter 0 counts
+  ggplot(., aes(x=sample,y=count, fill=phylum, group=phylum)) + #grouping enables keeping the same sorting of taxonomic units
+    geom_bar(stat="identity", colour="white", linewidth=0.1) + #plot stacked bars with white borders
+    scale_fill_manual(values=phylum_colors) +
+    facet_nested(. ~ Location + Origin,  scales="free") + #facet per day and treatment
+    guides(fill = guide_legend(ncol = 1)) +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+          axis.title.x = element_blank(),
+          panel.background = element_blank(),
+          panel.border = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.line = element_line(linewidth = 0.5, linetype = "solid", colour = "black")) +
+   labs(fill="Phylum",y = "Relative abundance",x="Samples")
+```
+### Phylum relative abundances
+
+```{r taxonomy_phylum_summary, warning=FALSE, comments="", message=FALSE}
+phylum_summary <- genome_counts_filt %>%
+  mutate_at(vars(-genome),~./sum(.)) %>% #apply TSS nornalisation
+  pivot_longer(-genome, names_to = "sample", values_to = "count") %>%
+  left_join(sample_metadata, by = join_by(sample == sample)) %>%
+  left_join(genome_metadata, by = join_by(genome == genome)) %>%
+  group_by(sample,phylum) %>%
+  summarise(relabun=sum(count))
+
+phylum_summary %>%
+    group_by(phylum) %>%
+    summarise(mean=mean(relabun, na.rm=T),sd=sd(relabun, na.rm=T)) %>%
+    arrange(-mean) %>%
+    tt()
+```
+
+```{r taxonomy_boxplot_phylum, warning=FALSE, comments="", message=FALSE, fig.height=8, fig.width=10, fig.fullwidth=TRUE}
+phylum_arrange <- phylum_summary %>%
+    group_by(phylum) %>%
+    summarise(mean=mean(relabun)) %>%
+    arrange(-mean) %>%
+    select(phylum) %>%
+    pull()
+
+phylum_summary %>%
+    filter(phylum %in% phylum_arrange) %>%
+    mutate(phylum=factor(phylum,levels=rev(phylum_arrange))) %>%
+    ggplot(aes(x=relabun, y=phylum, group=phylum, color=phylum)) +
+        scale_color_manual(values=phylum_colors[rev(phylum_arrange)]) +
+        geom_jitter(alpha=0.5) + 
+        theme_minimal() + 
+        theme(legend.position="none") +
+        labs(y="Phylum",x="Relative abundance")
+```
+
+## Taxonomy boxplot
+
+### Family
+```{r taxonomy_family_summary, warning=FALSE, comments="", message=FALSE}
+family_summary <- genome_counts_filt %>%
+  mutate_at(vars(-genome),~./sum(.)) %>% #apply TSS nornalisation
+  pivot_longer(-genome, names_to = "sample", values_to = "count") %>% #reduce to minimum number of columns
+  left_join(sample_metadata, by = join_by(sample == sample)) %>% #append sample metadata
+  left_join(., genome_metadata, by = join_by(genome == genome)) %>% #append genome metadata
+  group_by(sample,family) %>%
+  summarise(relabun=sum(count))
+
+family_summary %>%
+    group_by(family) %>%
+    summarise(mean=mean(relabun, na.rm=T),sd=sd(relabun, na.rm=T)) %>%
+    arrange(-mean) %>%
+    tt()
+```
+
+
+```{r taxonomy_jitterplot_family, warning=FALSE, comments="", message=FALSE, fig.height=8, fig.width=10, fig.fullwidth=TRUE}
+family_arrange <- family_summary %>%
+    group_by(family) %>%
+    summarise(mean=sum(relabun)) %>%
+    arrange(-mean) %>%
+    select(family) %>%
+    pull()
+
+# Per origin
+family_summary %>%
+    left_join(genome_metadata %>% select(family,phylum) %>% unique(),by=join_by(family==family)) %>%
+    left_join(sample_metadata,by=join_by(sample==sample)) %>%
+    filter(family %in% family_arrange[1:20]) %>%
+    mutate(family=factor(family,levels=rev(family_arrange[1:20]))) %>%
+    filter(relabun > 0) %>%
+    ggplot(aes(x=relabun, y=family, group=family, color=phylum)) +
+        scale_color_manual(values=phylum_colors[-8]) +
+        geom_jitter(alpha=0.5) + 
+        facet_grid(.~Origin)+
+        theme_minimal() + 
+        labs(y="Family", x="Relative abundance", color="Phylum")
+
+# Per location
+family_summary %>%
+    left_join(genome_metadata %>% select(family,phylum) %>% unique(),by=join_by(family==family)) %>%
+    left_join(sample_metadata,by=join_by(sample==sample)) %>%
+    filter(family %in% family_arrange[1:20]) %>%
+    mutate(family=factor(family,levels=rev(family_arrange[1:20]))) %>%
+    filter(relabun > 0) %>%
+    ggplot(aes(x=relabun, y=family, group=family, color=phylum)) +
+        scale_color_manual(values=phylum_colors[-8]) +
+        geom_jitter(alpha=0.5) + 
+        facet_grid(.~Location)+
+        theme_minimal() + 
+        labs(y="Family", x="Relative abundance", color="Phylum")
+
+```
+
+### Genus
+
+```{r taxonomy_genus_summary, warning=FALSE, comments="", message=FALSE}
+genus_summary <- genome_counts_filt %>%
+  mutate_at(vars(-genome),~./sum(.)) %>% #apply TSS nornalisation
+  pivot_longer(-genome, names_to = "sample", values_to = "count") %>% #reduce to minimum number of columns
+  left_join(sample_metadata, by = join_by(sample == sample)) %>% #append sample metadata
+  left_join(genome_metadata, by = join_by(genome == genome)) %>% #append genome metadata
+  group_by(sample,phylum,genus) %>%
+  summarise(relabun=sum(count)) %>%
+  filter(genus != "g__") %>%
+  mutate(genus= sub("^g__", "", genus))
+
+genus_summary_sort <- genus_summary %>%
+    group_by(genus) %>%
+    summarise(mean=mean(relabun, na.rm=T),sd=sd(relabun, na.rm=T)) %>%
+    arrange(-mean) 
+
+genus_summary_sort %>%
+    tt()
+```
+
+```{r taxonomy_jitterplot_genus, fig.height=14, fig.width=10, fig.fullwidth=TRUE}
+genus_arrange <- genus_summary %>%
+    group_by(genus) %>%
+    summarise(mean=sum(relabun)) %>%
+    filter(genus != "g__")%>%
+    arrange(-mean) %>%
+    select(genus) %>%
+    mutate(genus= sub("^g__", "", genus)) %>%
+    pull()
+
+#Per day
+genus_summary %>%
+    left_join(sample_metadata,by=join_by(sample==sample)) %>%
+    mutate(genus=factor(genus, levels=rev(genus_summary_sort %>% pull(genus)))) %>%
+    filter(relabun > 0) %>%
+    ggplot(aes(x=relabun, y=genus, group=genus, color=phylum)) +
+        scale_color_manual(values=phylum_colors) +
+        geom_jitter(alpha=0.5) + 
+        facet_grid(.~Origin)+
+        theme_minimal() + 
+        labs(y="Family", x="Relative abundance", color="Phylum")
+
+```
+
