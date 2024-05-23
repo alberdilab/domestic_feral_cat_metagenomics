@@ -29,6 +29,7 @@ genome_counts_filt %>%
           axis.line = element_line(linewidth = 0.5, linetype = "solid", colour = "black")) +
    labs(fill="Phylum",y = "Relative abundance",x="Samples")
 ```
+
 ### Phylum relative abundances
 
 ```{r taxonomy_phylum_summary, warning=FALSE, comments="", message=FALSE}
@@ -64,6 +65,40 @@ phylum_summary %>%
         theme_minimal() + 
         theme(legend.position="none") +
         labs(y="Phylum",x="Relative abundance")
+```
+
+### Phylum percentages by behaviour
+
+Tame cats
+```{r phylum_tame, comment="", echo=FALSE}
+physeq_tame <- subset_samples(physeq_genome, Origin == "Tame")
+physeq_tame <- prune_taxa(taxa_sums(physeq_tame)>0, physeq_tame)
+physeq_tame.phylum <- microbiome::aggregate_taxa(physeq_tame, 'phylum')
+physeq_tame.phylum.rel <-  microbiome::transform(physeq_tame.phylum, "compositional")
+tame.rel <- physeq_tame.phylum.rel@otu_table*100
+means.tame.rel <- as.data.frame(rowMeans(tame.rel))
+sd.tame.rel <- as.data.frame(rowSds(tame.rel, useNames = TRUE))
+summary.phylum.tame <- merge(means.tame.rel, sd.tame.rel, by="row.names")
+colnames(summary.phylum.tame) <- c("Phylum","mean", "sd")
+summary.phylum.tame%>%
+  arrange(-mean)%>%
+  tt()
+```
+
+Feral cats
+```{r phylum_feral, comment="", echo=FALSE}
+physeq_tame <- subset_samples(physeq_genome, Origin == "Feral")
+physeq_tame <- prune_taxa(taxa_sums(physeq_tame)>0, physeq_tame)
+physeq_tame.phylum <- microbiome::aggregate_taxa(physeq_tame, 'phylum')
+physeq_tame.phylum.rel <-  microbiome::transform(physeq_tame.phylum, "compositional")
+tame.rel <- physeq_tame.phylum.rel@otu_table*100
+means.tame.rel <- as.data.frame(rowMeans(tame.rel))
+sd.tame.rel <- as.data.frame(rowSds(tame.rel, useNames = TRUE))
+summary.phylum.tame <- merge(means.tame.rel, sd.tame.rel, by="row.names")
+colnames(summary.phylum.tame) <- c("Phylum","mean", "sd")
+summary.phylum.tame%>%
+  arrange(-mean)%>%
+  tt()
 ```
 
 ## Taxonomy boxplot

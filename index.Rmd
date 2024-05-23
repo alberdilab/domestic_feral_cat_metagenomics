@@ -24,7 +24,7 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-This webbook contains all the code used for data analysis in study on the recovery of metagenome‑assembled genomes and derived microbial communities from lizard fecal and cloacal samples.
+This webbook contains all the code used for data analysis in study on the recovery of metagenome‑assembled genomes and derived microbial communities from tame and feral cat faecal samples collected in six countries.
 
 ## Prepare the R environment
 
@@ -81,4 +81,5 @@ library(distillR)
 library(ANCOMBC)
 library(lme4)
 library(Hmsc)
+library(matrixStats)
 ```

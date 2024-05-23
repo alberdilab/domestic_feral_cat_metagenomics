@@ -153,6 +153,8 @@ postestimates_tree <- gheatmap(postestimates_tree, post_beta, offset=0, width=0.
 postestimates_tree +
         vexpand(.25, 1) # expand top 
 ```
+
+
 ## Correlations
 
 ```{r hmsc_correlations, warning=FALSE, comments="", message=FALSE}

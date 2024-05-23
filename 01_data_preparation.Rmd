@@ -103,6 +103,27 @@ phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI
     pull(colors, name=phylum)
 ```
 
+## Prepare a phyloseq object
+
+```{r phyloseq_objects, warning=FALSE, comments="", message=FALSE}
+phylo_samples <- sample_metadata %>% 
+  column_to_rownames("sample") %>% 
+  sample_data() #convert to phyloseq sample_data object
+phylo_genome <- genome_counts %>% 
+  column_to_rownames("genome") %>% 
+  otu_table(., taxa_are_rows = TRUE)
+phylo_taxonomy <- genome_metadata %>%
+  select(c(1,5:10))%>%
+  column_to_rownames("genome") %>% 
+  as.matrix() %>% 
+  tax_table() #convert to phyloseq tax_table object
+
+physeq_genome <- phyloseq(phylo_genome, phylo_taxonomy, phylo_samples)
+physeq_genome_clr <- microbiome::transform(physeq_genome, 'clr')
+
+```
+
+
 ## Wrap working objects
 
 All working objects are wrapped into a single Rdata object to facilitate downstream usage.
@@ -116,5 +137,7 @@ save(sample_metadata,
      genome_tree,
      genome_gifts, 
      phylum_colors,
+     physeq_genome,
+     physeq_genome_clr,
      file = "data/data.Rdata")
 ```
