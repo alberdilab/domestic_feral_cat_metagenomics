@@ -15,6 +15,7 @@ filter-reads-by-coverage
 transform-reads-into-genome-counts
 distill-annotations-into-gifts
 prepare-color-scheme
+prepare-a-phyloseq-object
 wrap-working-objects
 mag-catalogue
 genome-phylogeny
@@ -24,6 +25,8 @@ functional-ordination
 community-composition
 taxonomy-overview
 stacked-barplot
+phylum-relative-abundances
+phylum-percentages-by-behaviour
 taxonomy-boxplot
 family
 genus
@@ -43,6 +46,7 @@ hmsc-analysis
 load-data-1
 variance-partitioning
 posterior-estimates
+correlations
 predict-responses
-function-level
 element-level
+function-level

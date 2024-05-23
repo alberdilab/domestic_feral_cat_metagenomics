@@ -24,7 +24,7 @@
 <meta name="author" content="Antton Alberdi" />
 
 
-<meta name="date" content="2024-05-16" />
+<meta name="date" content="2024-05-23" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -2053,7 +2053,8 @@ color: #a52929;
 <li class="chapter" data-level="2.2.3" data-path="data-preparation.html"><a href="data-preparation.html#distill-annotations-into-gifts"><i class="fa fa-check"></i><b>2.2.3</b> Distill annotations into GIFTs</a></li>
 </ul></li>
 <li class="chapter" data-level="2.3" data-path="data-preparation.html"><a href="data-preparation.html#prepare-color-scheme"><i class="fa fa-check"></i><b>2.3</b> Prepare color scheme</a></li>
-<li class="chapter" data-level="2.4" data-path="data-preparation.html"><a href="data-preparation.html#wrap-working-objects"><i class="fa fa-check"></i><b>2.4</b> Wrap working objects</a></li>
+<li class="chapter" data-level="2.4" data-path="data-preparation.html"><a href="data-preparation.html#prepare-a-phyloseq-object"><i class="fa fa-check"></i><b>2.4</b> Prepare a phyloseq object</a></li>
+<li class="chapter" data-level="2.5" data-path="data-preparation.html"><a href="data-preparation.html#wrap-working-objects"><i class="fa fa-check"></i><b>2.5</b> Wrap working objects</a></li>
 </ul></li>
 <li class="chapter" data-level="3" data-path="mag-catalogue.html"><a href="mag-catalogue.html"><i class="fa fa-check"></i><b>3</b> MAG catalogue</a>
 <ul>
@@ -2067,6 +2068,8 @@ color: #a52929;
 <li class="chapter" data-level="4.1" data-path="community-composition.html"><a href="community-composition.html#taxonomy-overview"><i class="fa fa-check"></i><b>4.1</b> Taxonomy overview</a>
 <ul>
 <li class="chapter" data-level="4.1.1" data-path="community-composition.html"><a href="community-composition.html#stacked-barplot"><i class="fa fa-check"></i><b>4.1.1</b> Stacked barplot</a></li>
+<li class="chapter" data-level="4.1.2" data-path="community-composition.html"><a href="community-composition.html#phylum-relative-abundances"><i class="fa fa-check"></i><b>4.1.2</b> Phylum relative abundances</a></li>
+<li class="chapter" data-level="4.1.3" data-path="community-composition.html"><a href="community-composition.html#phylum-percentages-by-behaviour"><i class="fa fa-check"></i><b>4.1.3</b> Phylum percentages by behaviour</a></li>
 </ul></li>
 <li class="chapter" data-level="4.2" data-path="community-composition.html"><a href="community-composition.html#taxonomy-boxplot"><i class="fa fa-check"></i><b>4.2</b> Taxonomy boxplot</a>
 <ul>
@@ -2095,7 +2098,8 @@ color: #a52929;
 <li class="chapter" data-level="8.1" data-path="hmsc-analysis.html"><a href="hmsc-analysis.html#load-data-1"><i class="fa fa-check"></i><b>8.1</b> Load data</a></li>
 <li class="chapter" data-level="8.2" data-path="hmsc-analysis.html"><a href="hmsc-analysis.html#variance-partitioning"><i class="fa fa-check"></i><b>8.2</b> Variance partitioning</a></li>
 <li class="chapter" data-level="8.3" data-path="hmsc-analysis.html"><a href="hmsc-analysis.html#posterior-estimates"><i class="fa fa-check"></i><b>8.3</b> Posterior estimates</a></li>
-<li class="chapter" data-level="8.4" data-path="hmsc-analysis.html"><a href="hmsc-analysis.html#predict-responses"><i class="fa fa-check"></i><b>8.4</b> Predict responses</a></li>
+<li class="chapter" data-level="8.4" data-path="hmsc-analysis.html"><a href="hmsc-analysis.html#correlations"><i class="fa fa-check"></i><b>8.4</b> Correlations</a></li>
+<li class="chapter" data-level="8.5" data-path="hmsc-analysis.html"><a href="hmsc-analysis.html#predict-responses"><i class="fa fa-check"></i><b>8.5</b> Predict responses</a></li>
 </ul></li>
 <li class="divider"></li>
 <li><a href="https://www.alberdilab.dk" target="blank"><b>www.alberdilab.dk</b></a></li>
@@ -2200,18 +2204,37 @@ color: #a52929;
 <span id="cb13-7"><a href="data-preparation.html#cb13-7" tabindex="-1"></a>    <span class="fu">arrange</span>(phylum) <span class="sc">%&gt;%</span></span>
 <span id="cb13-8"><a href="data-preparation.html#cb13-8" tabindex="-1"></a>    <span class="fu">pull</span>(colors, <span class="at">name=</span>phylum)</span></code></pre></div>
 </div>
-<div id="wrap-working-objects" class="section level2 hasAnchor" number="2.4">
-<h2><span class="header-section-number">2.4</span> Wrap working objects<a href="data-preparation.html#wrap-working-objects" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<div id="prepare-a-phyloseq-object" class="section level2 hasAnchor" number="2.4">
+<h2><span class="header-section-number">2.4</span> Prepare a phyloseq object<a href="data-preparation.html#prepare-a-phyloseq-object" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb14-1"><a href="data-preparation.html#cb14-1" tabindex="-1"></a>phylo_samples <span class="ot">&lt;-</span> sample_metadata <span class="sc">%&gt;%</span> </span>
+<span id="cb14-2"><a href="data-preparation.html#cb14-2" tabindex="-1"></a>  <span class="fu">column_to_rownames</span>(<span class="st">&quot;sample&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb14-3"><a href="data-preparation.html#cb14-3" tabindex="-1"></a>  <span class="fu">sample_data</span>() <span class="co">#convert to phyloseq sample_data object</span></span>
+<span id="cb14-4"><a href="data-preparation.html#cb14-4" tabindex="-1"></a>phylo_genome <span class="ot">&lt;-</span> genome_counts <span class="sc">%&gt;%</span> </span>
+<span id="cb14-5"><a href="data-preparation.html#cb14-5" tabindex="-1"></a>  <span class="fu">column_to_rownames</span>(<span class="st">&quot;genome&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb14-6"><a href="data-preparation.html#cb14-6" tabindex="-1"></a>  <span class="fu">otu_table</span>(., <span class="at">taxa_are_rows =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb14-7"><a href="data-preparation.html#cb14-7" tabindex="-1"></a>phylo_taxonomy <span class="ot">&lt;-</span> genome_metadata <span class="sc">%&gt;%</span></span>
+<span id="cb14-8"><a href="data-preparation.html#cb14-8" tabindex="-1"></a>  <span class="fu">select</span>(<span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">5</span><span class="sc">:</span><span class="dv">10</span>))<span class="sc">%&gt;%</span></span>
+<span id="cb14-9"><a href="data-preparation.html#cb14-9" tabindex="-1"></a>  <span class="fu">column_to_rownames</span>(<span class="st">&quot;genome&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb14-10"><a href="data-preparation.html#cb14-10" tabindex="-1"></a>  <span class="fu">as.matrix</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb14-11"><a href="data-preparation.html#cb14-11" tabindex="-1"></a>  <span class="fu">tax_table</span>() <span class="co">#convert to phyloseq tax_table object</span></span>
+<span id="cb14-12"><a href="data-preparation.html#cb14-12" tabindex="-1"></a></span>
+<span id="cb14-13"><a href="data-preparation.html#cb14-13" tabindex="-1"></a>physeq_genome <span class="ot">&lt;-</span> <span class="fu">phyloseq</span>(phylo_genome, phylo_taxonomy, phylo_samples)</span>
+<span id="cb14-14"><a href="data-preparation.html#cb14-14" tabindex="-1"></a>physeq_genome_clr <span class="ot">&lt;-</span> microbiome<span class="sc">::</span><span class="fu">transform</span>(physeq_genome, <span class="st">&#39;clr&#39;</span>)</span></code></pre></div>
+</div>
+<div id="wrap-working-objects" class="section level2 hasAnchor" number="2.5">
+<h2><span class="header-section-number">2.5</span> Wrap working objects<a href="data-preparation.html#wrap-working-objects" class="anchor-section" aria-label="Anchor link to header"></a></h2>
 <p>All working objects are wrapped into a single Rdata object to facilitate downstream usage.</p>
-<div class="sourceCode" id="cb14"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb14-1"><a href="data-preparation.html#cb14-1" tabindex="-1"></a><span class="fu">save</span>(sample_metadata, </span>
-<span id="cb14-2"><a href="data-preparation.html#cb14-2" tabindex="-1"></a>     genome_metadata, </span>
-<span id="cb14-3"><a href="data-preparation.html#cb14-3" tabindex="-1"></a>     read_counts, </span>
-<span id="cb14-4"><a href="data-preparation.html#cb14-4" tabindex="-1"></a>     genome_counts, </span>
-<span id="cb14-5"><a href="data-preparation.html#cb14-5" tabindex="-1"></a>     genome_counts_filt, </span>
-<span id="cb14-6"><a href="data-preparation.html#cb14-6" tabindex="-1"></a>     genome_tree,</span>
-<span id="cb14-7"><a href="data-preparation.html#cb14-7" tabindex="-1"></a>     genome_gifts, </span>
-<span id="cb14-8"><a href="data-preparation.html#cb14-8" tabindex="-1"></a>     phylum_colors,</span>
-<span id="cb14-9"><a href="data-preparation.html#cb14-9" tabindex="-1"></a>     <span class="at">file =</span> <span class="st">&quot;data/data.Rdata&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb15-1"><a href="data-preparation.html#cb15-1" tabindex="-1"></a><span class="fu">save</span>(sample_metadata, </span>
+<span id="cb15-2"><a href="data-preparation.html#cb15-2" tabindex="-1"></a>     genome_metadata, </span>
+<span id="cb15-3"><a href="data-preparation.html#cb15-3" tabindex="-1"></a>     read_counts, </span>
+<span id="cb15-4"><a href="data-preparation.html#cb15-4" tabindex="-1"></a>     genome_counts, </span>
+<span id="cb15-5"><a href="data-preparation.html#cb15-5" tabindex="-1"></a>     genome_counts_filt, </span>
+<span id="cb15-6"><a href="data-preparation.html#cb15-6" tabindex="-1"></a>     genome_tree,</span>
+<span id="cb15-7"><a href="data-preparation.html#cb15-7" tabindex="-1"></a>     genome_gifts, </span>
+<span id="cb15-8"><a href="data-preparation.html#cb15-8" tabindex="-1"></a>     phylum_colors,</span>
+<span id="cb15-9"><a href="data-preparation.html#cb15-9" tabindex="-1"></a>     physeq_genome,</span>
+<span id="cb15-10"><a href="data-preparation.html#cb15-10" tabindex="-1"></a>     physeq_genome_clr,</span>
+<span id="cb15-11"><a href="data-preparation.html#cb15-11" tabindex="-1"></a>     <span class="at">file =</span> <span class="st">&quot;data/data.Rdata&quot;</span>)</span></code></pre></div>
 
 </div>
 </div>

@@ -24,7 +24,7 @@
 <meta name="author" content="Antton Alberdi" />
 
 
-<meta name="date" content="2024-05-16" />
+<meta name="date" content="2024-05-23" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -2053,7 +2053,8 @@ color: #a52929;
 <li class="chapter" data-level="2.2.3" data-path="data-preparation.html"><a href="data-preparation.html#distill-annotations-into-gifts"><i class="fa fa-check"></i><b>2.2.3</b> Distill annotations into GIFTs</a></li>
 </ul></li>
 <li class="chapter" data-level="2.3" data-path="data-preparation.html"><a href="data-preparation.html#prepare-color-scheme"><i class="fa fa-check"></i><b>2.3</b> Prepare color scheme</a></li>
-<li class="chapter" data-level="2.4" data-path="data-preparation.html"><a href="data-preparation.html#wrap-working-objects"><i class="fa fa-check"></i><b>2.4</b> Wrap working objects</a></li>
+<li class="chapter" data-level="2.4" data-path="data-preparation.html"><a href="data-preparation.html#prepare-a-phyloseq-object"><i class="fa fa-check"></i><b>2.4</b> Prepare a phyloseq object</a></li>
+<li class="chapter" data-level="2.5" data-path="data-preparation.html"><a href="data-preparation.html#wrap-working-objects"><i class="fa fa-check"></i><b>2.5</b> Wrap working objects</a></li>
 </ul></li>
 <li class="chapter" data-level="3" data-path="mag-catalogue.html"><a href="mag-catalogue.html"><i class="fa fa-check"></i><b>3</b> MAG catalogue</a>
 <ul>
@@ -2067,6 +2068,8 @@ color: #a52929;
 <li class="chapter" data-level="4.1" data-path="community-composition.html"><a href="community-composition.html#taxonomy-overview"><i class="fa fa-check"></i><b>4.1</b> Taxonomy overview</a>
 <ul>
 <li class="chapter" data-level="4.1.1" data-path="community-composition.html"><a href="community-composition.html#stacked-barplot"><i class="fa fa-check"></i><b>4.1.1</b> Stacked barplot</a></li>
+<li class="chapter" data-level="4.1.2" data-path="community-composition.html"><a href="community-composition.html#phylum-relative-abundances"><i class="fa fa-check"></i><b>4.1.2</b> Phylum relative abundances</a></li>
+<li class="chapter" data-level="4.1.3" data-path="community-composition.html"><a href="community-composition.html#phylum-percentages-by-behaviour"><i class="fa fa-check"></i><b>4.1.3</b> Phylum percentages by behaviour</a></li>
 </ul></li>
 <li class="chapter" data-level="4.2" data-path="community-composition.html"><a href="community-composition.html#taxonomy-boxplot"><i class="fa fa-check"></i><b>4.2</b> Taxonomy boxplot</a>
 <ul>
@@ -2095,7 +2098,8 @@ color: #a52929;
 <li class="chapter" data-level="8.1" data-path="hmsc-analysis.html"><a href="hmsc-analysis.html#load-data-1"><i class="fa fa-check"></i><b>8.1</b> Load data</a></li>
 <li class="chapter" data-level="8.2" data-path="hmsc-analysis.html"><a href="hmsc-analysis.html#variance-partitioning"><i class="fa fa-check"></i><b>8.2</b> Variance partitioning</a></li>
 <li class="chapter" data-level="8.3" data-path="hmsc-analysis.html"><a href="hmsc-analysis.html#posterior-estimates"><i class="fa fa-check"></i><b>8.3</b> Posterior estimates</a></li>
-<li class="chapter" data-level="8.4" data-path="hmsc-analysis.html"><a href="hmsc-analysis.html#predict-responses"><i class="fa fa-check"></i><b>8.4</b> Predict responses</a></li>
+<li class="chapter" data-level="8.4" data-path="hmsc-analysis.html"><a href="hmsc-analysis.html#correlations"><i class="fa fa-check"></i><b>8.4</b> Correlations</a></li>
+<li class="chapter" data-level="8.5" data-path="hmsc-analysis.html"><a href="hmsc-analysis.html#predict-responses"><i class="fa fa-check"></i><b>8.5</b> Predict responses</a></li>
 </ul></li>
 <li class="divider"></li>
 <li><a href="https://www.alberdilab.dk" target="blank"><b>www.alberdilab.dk</b></a></li>
@@ -2123,180 +2127,180 @@ color: #a52929;
 <h1><span class="header-section-number">Chapter 7</span> HMSC setup<a href="hmsc-setup.html#hmsc-setup" class="anchor-section" aria-label="Anchor link to header"></a></h1>
 <div id="setup" class="section level2 hasAnchor" number="7.1">
 <h2><span class="header-section-number">7.1</span> Setup<a href="hmsc-setup.html#setup" class="anchor-section" aria-label="Anchor link to header"></a></h2>
-<div class="sourceCode" id="cb56"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb56-1"><a href="hmsc-setup.html#cb56-1" tabindex="-1"></a><span class="fu">load</span>(<span class="st">&quot;data/data.Rdata&quot;</span>)</span></code></pre></div>
-<div class="sourceCode" id="cb57"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb57-1"><a href="hmsc-setup.html#cb57-1" tabindex="-1"></a><span class="co"># Random effects data (study design)</span></span>
-<span id="cb57-2"><a href="hmsc-setup.html#cb57-2" tabindex="-1"></a>StudyDesign <span class="ot">&lt;-</span> sample_metadata <span class="sc">%&gt;%</span></span>
-<span id="cb57-3"><a href="hmsc-setup.html#cb57-3" tabindex="-1"></a>                    <span class="fu">select</span>(sample,Location) <span class="sc">%&gt;%</span> </span>
-<span id="cb57-4"><a href="hmsc-setup.html#cb57-4" tabindex="-1"></a>                    <span class="fu">rename</span>(<span class="at">location=</span>Location) <span class="sc">%&gt;%</span> </span>
-<span id="cb57-5"><a href="hmsc-setup.html#cb57-5" tabindex="-1"></a>                    <span class="fu">column_to_rownames</span>(<span class="st">&quot;sample&quot;</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb57-6"><a href="hmsc-setup.html#cb57-6" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="at">location =</span> <span class="fu">factor</span>(location))</span>
-<span id="cb57-7"><a href="hmsc-setup.html#cb57-7" tabindex="-1"></a></span>
-<span id="cb57-8"><a href="hmsc-setup.html#cb57-8" tabindex="-1"></a><span class="co"># Genome count table (quantitative community data)</span></span>
-<span id="cb57-9"><a href="hmsc-setup.html#cb57-9" tabindex="-1"></a>YData <span class="ot">&lt;-</span> read_counts <span class="sc">%&gt;%</span> </span>
-<span id="cb57-10"><a href="hmsc-setup.html#cb57-10" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> . <span class="sc">+</span><span class="dv">1</span> )) <span class="sc">%&gt;%</span> <span class="co">#add +1 pseudocount to remove zeros</span></span>
-<span id="cb57-11"><a href="hmsc-setup.html#cb57-11" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> . <span class="sc">/</span> (genome_metadata<span class="sc">$</span>length <span class="sc">/</span> <span class="dv">150</span>) )) <span class="sc">%&gt;%</span> <span class="co">#transform to genome counts</span></span>
-<span id="cb57-12"><a href="hmsc-setup.html#cb57-12" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span>  <span class="fu">log</span>(.) )) <span class="sc">%&gt;%</span> <span class="co">#log-transform</span></span>
-<span id="cb57-13"><a href="hmsc-setup.html#cb57-13" tabindex="-1"></a>                    <span class="fu">arrange</span>(genome) <span class="sc">%&gt;%</span></span>
-<span id="cb57-14"><a href="hmsc-setup.html#cb57-14" tabindex="-1"></a>                    <span class="fu">column_to_rownames</span>(<span class="st">&quot;genome&quot;</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb57-15"><a href="hmsc-setup.html#cb57-15" tabindex="-1"></a>                    <span class="fu">select</span>(<span class="fu">all_of</span>(<span class="fu">row.names</span>(StudyDesign))) <span class="sc">%&gt;%</span>  <span class="co">#filter only faecal samples</span></span>
-<span id="cb57-16"><a href="hmsc-setup.html#cb57-16" tabindex="-1"></a>                    <span class="fu">as.data.frame</span>() <span class="sc">%&gt;%</span></span>
-<span id="cb57-17"><a href="hmsc-setup.html#cb57-17" tabindex="-1"></a>                    <span class="fu">t</span>() <span class="co"># transpose</span></span>
-<span id="cb57-18"><a href="hmsc-setup.html#cb57-18" tabindex="-1"></a></span>
-<span id="cb57-19"><a href="hmsc-setup.html#cb57-19" tabindex="-1"></a><span class="co"># Fixed effects data (explanatory variables)</span></span>
-<span id="cb57-20"><a href="hmsc-setup.html#cb57-20" tabindex="-1"></a>XData <span class="ot">&lt;-</span> sample_metadata <span class="sc">%&gt;%</span> </span>
-<span id="cb57-21"><a href="hmsc-setup.html#cb57-21" tabindex="-1"></a>                    <span class="fu">column_to_rownames</span>(<span class="st">&quot;sample&quot;</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb57-22"><a href="hmsc-setup.html#cb57-22" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="at">logseqdepth=</span>read_counts <span class="sc">%&gt;%</span> <span class="co">#total log-sequencing depth</span></span>
-<span id="cb57-23"><a href="hmsc-setup.html#cb57-23" tabindex="-1"></a>                        <span class="fu">select</span>(<span class="fu">all_of</span>(<span class="fu">row.names</span>(StudyDesign))) <span class="sc">%&gt;%</span> </span>
-<span id="cb57-24"><a href="hmsc-setup.html#cb57-24" tabindex="-1"></a>                        <span class="fu">colSums</span>() <span class="sc">%&gt;%</span> </span>
-<span id="cb57-25"><a href="hmsc-setup.html#cb57-25" tabindex="-1"></a>                        <span class="fu">log</span>()</span>
-<span id="cb57-26"><a href="hmsc-setup.html#cb57-26" tabindex="-1"></a>                    ) <span class="sc">%&gt;%</span> </span>
-<span id="cb57-27"><a href="hmsc-setup.html#cb57-27" tabindex="-1"></a>                    <span class="fu">rename</span>(<span class="at">origin=</span>Origin, <span class="at">sex=</span>F.M) <span class="sc">%&gt;%</span> </span>
-<span id="cb57-28"><a href="hmsc-setup.html#cb57-28" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="at">origin =</span> <span class="fu">factor</span>(origin)) <span class="sc">%&gt;%</span></span>
-<span id="cb57-29"><a href="hmsc-setup.html#cb57-29" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="at">sex =</span> <span class="fu">factor</span>(sex)) <span class="sc">%&gt;%</span> </span>
-<span id="cb57-30"><a href="hmsc-setup.html#cb57-30" tabindex="-1"></a>                    <span class="fu">select</span>(origin, sex, logseqdepth)</span>
-<span id="cb57-31"><a href="hmsc-setup.html#cb57-31" tabindex="-1"></a></span>
-<span id="cb57-32"><a href="hmsc-setup.html#cb57-32" tabindex="-1"></a><span class="co"># Genome phylogeny</span></span>
-<span id="cb57-33"><a href="hmsc-setup.html#cb57-33" tabindex="-1"></a>PData <span class="ot">&lt;-</span> genome_tree</span></code></pre></div>
+<div class="sourceCode" id="cb57"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb57-1"><a href="hmsc-setup.html#cb57-1" tabindex="-1"></a><span class="fu">load</span>(<span class="st">&quot;data/data.Rdata&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb58"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb58-1"><a href="hmsc-setup.html#cb58-1" tabindex="-1"></a><span class="co"># Random effects data (study design)</span></span>
+<span id="cb58-2"><a href="hmsc-setup.html#cb58-2" tabindex="-1"></a>StudyDesign <span class="ot">&lt;-</span> sample_metadata <span class="sc">%&gt;%</span></span>
+<span id="cb58-3"><a href="hmsc-setup.html#cb58-3" tabindex="-1"></a>                    <span class="fu">select</span>(sample,Location) <span class="sc">%&gt;%</span> </span>
+<span id="cb58-4"><a href="hmsc-setup.html#cb58-4" tabindex="-1"></a>                    <span class="fu">rename</span>(<span class="at">location=</span>Location) <span class="sc">%&gt;%</span> </span>
+<span id="cb58-5"><a href="hmsc-setup.html#cb58-5" tabindex="-1"></a>                    <span class="fu">column_to_rownames</span>(<span class="st">&quot;sample&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb58-6"><a href="hmsc-setup.html#cb58-6" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="at">location =</span> <span class="fu">factor</span>(location))</span>
+<span id="cb58-7"><a href="hmsc-setup.html#cb58-7" tabindex="-1"></a></span>
+<span id="cb58-8"><a href="hmsc-setup.html#cb58-8" tabindex="-1"></a><span class="co"># Genome count table (quantitative community data)</span></span>
+<span id="cb58-9"><a href="hmsc-setup.html#cb58-9" tabindex="-1"></a>YData <span class="ot">&lt;-</span> read_counts <span class="sc">%&gt;%</span> </span>
+<span id="cb58-10"><a href="hmsc-setup.html#cb58-10" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> . <span class="sc">+</span><span class="dv">1</span> )) <span class="sc">%&gt;%</span> <span class="co">#add +1 pseudocount to remove zeros</span></span>
+<span id="cb58-11"><a href="hmsc-setup.html#cb58-11" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> . <span class="sc">/</span> (genome_metadata<span class="sc">$</span>length <span class="sc">/</span> <span class="dv">150</span>) )) <span class="sc">%&gt;%</span> <span class="co">#transform to genome counts</span></span>
+<span id="cb58-12"><a href="hmsc-setup.html#cb58-12" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span>  <span class="fu">log</span>(.) )) <span class="sc">%&gt;%</span> <span class="co">#log-transform</span></span>
+<span id="cb58-13"><a href="hmsc-setup.html#cb58-13" tabindex="-1"></a>                    <span class="fu">arrange</span>(genome) <span class="sc">%&gt;%</span></span>
+<span id="cb58-14"><a href="hmsc-setup.html#cb58-14" tabindex="-1"></a>                    <span class="fu">column_to_rownames</span>(<span class="st">&quot;genome&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb58-15"><a href="hmsc-setup.html#cb58-15" tabindex="-1"></a>                    <span class="fu">select</span>(<span class="fu">all_of</span>(<span class="fu">row.names</span>(StudyDesign))) <span class="sc">%&gt;%</span>  <span class="co">#filter only faecal samples</span></span>
+<span id="cb58-16"><a href="hmsc-setup.html#cb58-16" tabindex="-1"></a>                    <span class="fu">as.data.frame</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb58-17"><a href="hmsc-setup.html#cb58-17" tabindex="-1"></a>                    <span class="fu">t</span>() <span class="co"># transpose</span></span>
+<span id="cb58-18"><a href="hmsc-setup.html#cb58-18" tabindex="-1"></a></span>
+<span id="cb58-19"><a href="hmsc-setup.html#cb58-19" tabindex="-1"></a><span class="co"># Fixed effects data (explanatory variables)</span></span>
+<span id="cb58-20"><a href="hmsc-setup.html#cb58-20" tabindex="-1"></a>XData <span class="ot">&lt;-</span> sample_metadata <span class="sc">%&gt;%</span> </span>
+<span id="cb58-21"><a href="hmsc-setup.html#cb58-21" tabindex="-1"></a>                    <span class="fu">column_to_rownames</span>(<span class="st">&quot;sample&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb58-22"><a href="hmsc-setup.html#cb58-22" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="at">logseqdepth=</span>read_counts <span class="sc">%&gt;%</span> <span class="co">#total log-sequencing depth</span></span>
+<span id="cb58-23"><a href="hmsc-setup.html#cb58-23" tabindex="-1"></a>                        <span class="fu">select</span>(<span class="fu">all_of</span>(<span class="fu">row.names</span>(StudyDesign))) <span class="sc">%&gt;%</span> </span>
+<span id="cb58-24"><a href="hmsc-setup.html#cb58-24" tabindex="-1"></a>                        <span class="fu">colSums</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb58-25"><a href="hmsc-setup.html#cb58-25" tabindex="-1"></a>                        <span class="fu">log</span>()</span>
+<span id="cb58-26"><a href="hmsc-setup.html#cb58-26" tabindex="-1"></a>                    ) <span class="sc">%&gt;%</span> </span>
+<span id="cb58-27"><a href="hmsc-setup.html#cb58-27" tabindex="-1"></a>                    <span class="fu">rename</span>(<span class="at">origin=</span>Origin, <span class="at">sex=</span>F.M) <span class="sc">%&gt;%</span> </span>
+<span id="cb58-28"><a href="hmsc-setup.html#cb58-28" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="at">origin =</span> <span class="fu">factor</span>(origin)) <span class="sc">%&gt;%</span></span>
+<span id="cb58-29"><a href="hmsc-setup.html#cb58-29" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="at">sex =</span> <span class="fu">factor</span>(sex)) <span class="sc">%&gt;%</span> </span>
+<span id="cb58-30"><a href="hmsc-setup.html#cb58-30" tabindex="-1"></a>                    <span class="fu">select</span>(origin, sex, logseqdepth)</span>
+<span id="cb58-31"><a href="hmsc-setup.html#cb58-31" tabindex="-1"></a></span>
+<span id="cb58-32"><a href="hmsc-setup.html#cb58-32" tabindex="-1"></a><span class="co"># Genome phylogeny</span></span>
+<span id="cb58-33"><a href="hmsc-setup.html#cb58-33" tabindex="-1"></a>PData <span class="ot">&lt;-</span> genome_tree</span></code></pre></div>
 </div>
 <div id="define-formulas-of-the-hmsc-model" class="section level2 hasAnchor" number="7.2">
 <h2><span class="header-section-number">7.2</span> Define formulas of the Hmsc model<a href="hmsc-setup.html#define-formulas-of-the-hmsc-model" class="anchor-section" aria-label="Anchor link to header"></a></h2>
-<div class="sourceCode" id="cb58"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb58-1"><a href="hmsc-setup.html#cb58-1" tabindex="-1"></a><span class="co"># Fixed effects formula</span></span>
-<span id="cb58-2"><a href="hmsc-setup.html#cb58-2" tabindex="-1"></a>XFormula <span class="ot">=</span> <span class="er">~</span>origin <span class="sc">+</span> sex <span class="sc">+</span> logseqdepth</span>
-<span id="cb58-3"><a href="hmsc-setup.html#cb58-3" tabindex="-1"></a></span>
-<span id="cb58-4"><a href="hmsc-setup.html#cb58-4" tabindex="-1"></a><span class="co"># Study design</span></span>
-<span id="cb58-5"><a href="hmsc-setup.html#cb58-5" tabindex="-1"></a>rL.location <span class="ot">=</span> <span class="fu">HmscRandomLevel</span>(<span class="at">units =</span> <span class="fu">levels</span>(StudyDesign<span class="sc">$</span>location))</span></code></pre></div>
+<div class="sourceCode" id="cb59"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb59-1"><a href="hmsc-setup.html#cb59-1" tabindex="-1"></a><span class="co"># Fixed effects formula</span></span>
+<span id="cb59-2"><a href="hmsc-setup.html#cb59-2" tabindex="-1"></a>XFormula <span class="ot">=</span> <span class="er">~</span>origin <span class="sc">+</span> sex <span class="sc">+</span> logseqdepth</span>
+<span id="cb59-3"><a href="hmsc-setup.html#cb59-3" tabindex="-1"></a></span>
+<span id="cb59-4"><a href="hmsc-setup.html#cb59-4" tabindex="-1"></a><span class="co"># Study design</span></span>
+<span id="cb59-5"><a href="hmsc-setup.html#cb59-5" tabindex="-1"></a>rL.location <span class="ot">=</span> <span class="fu">HmscRandomLevel</span>(<span class="at">units =</span> <span class="fu">levels</span>(StudyDesign<span class="sc">$</span>location))</span></code></pre></div>
 </div>
 <div id="define-and-hmsc-models" class="section level2 hasAnchor" number="7.3">
 <h2><span class="header-section-number">7.3</span> Define and Hmsc models<a href="hmsc-setup.html#define-and-hmsc-models" class="anchor-section" aria-label="Anchor link to header"></a></h2>
-<div class="sourceCode" id="cb59"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb59-1"><a href="hmsc-setup.html#cb59-1" tabindex="-1"></a><span class="co">#Define models</span></span>
-<span id="cb59-2"><a href="hmsc-setup.html#cb59-2" tabindex="-1"></a>model1 <span class="ot">=</span> <span class="fu">Hmsc</span>(<span class="at">Y=</span>YData,</span>
-<span id="cb59-3"><a href="hmsc-setup.html#cb59-3" tabindex="-1"></a>         <span class="at">XData =</span> XData, </span>
-<span id="cb59-4"><a href="hmsc-setup.html#cb59-4" tabindex="-1"></a>         <span class="at">XFormula =</span> XFormula,</span>
-<span id="cb59-5"><a href="hmsc-setup.html#cb59-5" tabindex="-1"></a>         <span class="at">studyDesign =</span> StudyDesign,</span>
-<span id="cb59-6"><a href="hmsc-setup.html#cb59-6" tabindex="-1"></a>         <span class="at">phyloTree =</span> PData, </span>
-<span id="cb59-7"><a href="hmsc-setup.html#cb59-7" tabindex="-1"></a>         <span class="at">ranLevels=</span><span class="fu">list</span>(<span class="st">&quot;location&quot;</span><span class="ot">=</span>rL.location),</span>
-<span id="cb59-8"><a href="hmsc-setup.html#cb59-8" tabindex="-1"></a>         <span class="at">distr =</span> <span class="st">&quot;normal&quot;</span>,</span>
-<span id="cb59-9"><a href="hmsc-setup.html#cb59-9" tabindex="-1"></a>         <span class="at">YScale =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb59-10"><a href="hmsc-setup.html#cb59-10" tabindex="-1"></a></span>
-<span id="cb59-11"><a href="hmsc-setup.html#cb59-11" tabindex="-1"></a><span class="co">#Save list of models as an R object.</span></span>
-<span id="cb59-12"><a href="hmsc-setup.html#cb59-12" tabindex="-1"></a>model_list <span class="ot">=</span> <span class="fu">list</span>(<span class="at">model1=</span>model1)</span>
-<span id="cb59-13"><a href="hmsc-setup.html#cb59-13" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="st">&quot;hmsc&quot;</span>)){<span class="fu">dir.create</span>(<span class="st">&quot;hmsc&quot;</span>)}</span>
-<span id="cb59-14"><a href="hmsc-setup.html#cb59-14" tabindex="-1"></a><span class="fu">save</span>(model_list, <span class="at">file =</span> <span class="st">&quot;hmsc/hmsc.Rdata&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb60"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb60-1"><a href="hmsc-setup.html#cb60-1" tabindex="-1"></a><span class="co">#Define models</span></span>
+<span id="cb60-2"><a href="hmsc-setup.html#cb60-2" tabindex="-1"></a>model1 <span class="ot">=</span> <span class="fu">Hmsc</span>(<span class="at">Y=</span>YData,</span>
+<span id="cb60-3"><a href="hmsc-setup.html#cb60-3" tabindex="-1"></a>         <span class="at">XData =</span> XData, </span>
+<span id="cb60-4"><a href="hmsc-setup.html#cb60-4" tabindex="-1"></a>         <span class="at">XFormula =</span> XFormula,</span>
+<span id="cb60-5"><a href="hmsc-setup.html#cb60-5" tabindex="-1"></a>         <span class="at">studyDesign =</span> StudyDesign,</span>
+<span id="cb60-6"><a href="hmsc-setup.html#cb60-6" tabindex="-1"></a>         <span class="at">phyloTree =</span> PData, </span>
+<span id="cb60-7"><a href="hmsc-setup.html#cb60-7" tabindex="-1"></a>         <span class="at">ranLevels=</span><span class="fu">list</span>(<span class="st">&quot;location&quot;</span><span class="ot">=</span>rL.location),</span>
+<span id="cb60-8"><a href="hmsc-setup.html#cb60-8" tabindex="-1"></a>         <span class="at">distr =</span> <span class="st">&quot;normal&quot;</span>,</span>
+<span id="cb60-9"><a href="hmsc-setup.html#cb60-9" tabindex="-1"></a>         <span class="at">YScale =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb60-10"><a href="hmsc-setup.html#cb60-10" tabindex="-1"></a></span>
+<span id="cb60-11"><a href="hmsc-setup.html#cb60-11" tabindex="-1"></a><span class="co">#Save list of models as an R object.</span></span>
+<span id="cb60-12"><a href="hmsc-setup.html#cb60-12" tabindex="-1"></a>model_list <span class="ot">=</span> <span class="fu">list</span>(<span class="at">model1=</span>model1)</span>
+<span id="cb60-13"><a href="hmsc-setup.html#cb60-13" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="st">&quot;hmsc&quot;</span>)){<span class="fu">dir.create</span>(<span class="st">&quot;hmsc&quot;</span>)}</span>
+<span id="cb60-14"><a href="hmsc-setup.html#cb60-14" tabindex="-1"></a><span class="fu">save</span>(model_list, <span class="at">file =</span> <span class="st">&quot;hmsc/hmsc.Rdata&quot;</span>)</span></code></pre></div>
 <p>Upload <strong>hmsc/hmsc.Rdata</strong> to the HPC respecting the directory structure.</p>
 </div>
 <div id="define-mcmc" class="section level2 hasAnchor" number="7.4">
 <h2><span class="header-section-number">7.4</span> Define MCMC<a href="hmsc-setup.html#define-mcmc" class="anchor-section" aria-label="Anchor link to header"></a></h2>
-<div class="sourceCode" id="cb60"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb60-1"><a href="hmsc-setup.html#cb60-1" tabindex="-1"></a><span class="co"># How often to sample the MCMC</span></span>
-<span id="cb60-2"><a href="hmsc-setup.html#cb60-2" tabindex="-1"></a>MCMC_samples_list <span class="ot">=</span> <span class="dv">250</span></span>
-<span id="cb60-3"><a href="hmsc-setup.html#cb60-3" tabindex="-1"></a></span>
-<span id="cb60-4"><a href="hmsc-setup.html#cb60-4" tabindex="-1"></a><span class="co"># The number of MCMC steps between each recording sample</span></span>
-<span id="cb60-5"><a href="hmsc-setup.html#cb60-5" tabindex="-1"></a>MCMC_thin_list <span class="ot">=</span> <span class="dv">10</span></span>
-<span id="cb60-6"><a href="hmsc-setup.html#cb60-6" tabindex="-1"></a></span>
-<span id="cb60-7"><a href="hmsc-setup.html#cb60-7" tabindex="-1"></a><span class="co"># The number of MCMC chains to use</span></span>
-<span id="cb60-8"><a href="hmsc-setup.html#cb60-8" tabindex="-1"></a>nChains <span class="ot">=</span> <span class="dv">4</span></span></code></pre></div>
+<div class="sourceCode" id="cb61"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb61-1"><a href="hmsc-setup.html#cb61-1" tabindex="-1"></a><span class="co"># How often to sample the MCMC</span></span>
+<span id="cb61-2"><a href="hmsc-setup.html#cb61-2" tabindex="-1"></a>MCMC_samples_list <span class="ot">=</span> <span class="dv">250</span></span>
+<span id="cb61-3"><a href="hmsc-setup.html#cb61-3" tabindex="-1"></a></span>
+<span id="cb61-4"><a href="hmsc-setup.html#cb61-4" tabindex="-1"></a><span class="co"># The number of MCMC steps between each recording sample</span></span>
+<span id="cb61-5"><a href="hmsc-setup.html#cb61-5" tabindex="-1"></a>MCMC_thin_list <span class="ot">=</span> <span class="dv">10</span></span>
+<span id="cb61-6"><a href="hmsc-setup.html#cb61-6" tabindex="-1"></a></span>
+<span id="cb61-7"><a href="hmsc-setup.html#cb61-7" tabindex="-1"></a><span class="co"># The number of MCMC chains to use</span></span>
+<span id="cb61-8"><a href="hmsc-setup.html#cb61-8" tabindex="-1"></a>nChains <span class="ot">=</span> <span class="dv">4</span></span></code></pre></div>
 </div>
 <div id="generate-hmsc-executables" class="section level2 hasAnchor" number="7.5">
 <h2><span class="header-section-number">7.5</span> Generate Hmsc executables<a href="hmsc-setup.html#generate-hmsc-executables" class="anchor-section" aria-label="Anchor link to header"></a></h2>
 <p>The next chunk generates shell files for every combination of model, MCMC samples and MCMM thinning, ready to be launched as SLURM jobs.</p>
-<div class="sourceCode" id="cb61"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb61-1"><a href="hmsc-setup.html#cb61-1" tabindex="-1"></a>modelchains <span class="ot">&lt;-</span> <span class="fu">expand.grid</span>(<span class="at">model =</span> <span class="fu">names</span>(model_list), <span class="at">sample =</span> MCMC_samples_list, <span class="at">thin =</span> MCMC_thin_list)</span>
-<span id="cb61-2"><a href="hmsc-setup.html#cb61-2" tabindex="-1"></a></span>
-<span id="cb61-3"><a href="hmsc-setup.html#cb61-3" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="st">&quot;hmsc&quot;</span>)){<span class="fu">dir.create</span>(<span class="st">&quot;hmsc&quot;</span>)}</span>
-<span id="cb61-4"><a href="hmsc-setup.html#cb61-4" tabindex="-1"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(modelchains))){</span>
-<span id="cb61-5"><a href="hmsc-setup.html#cb61-5" tabindex="-1"></a>      modelname<span class="ot">=</span><span class="fu">as.character</span>(modelchains[i,<span class="dv">1</span>])</span>
-<span id="cb61-6"><a href="hmsc-setup.html#cb61-6" tabindex="-1"></a>      sample<span class="ot">=</span>modelchains[i,<span class="dv">2</span>]</span>
-<span id="cb61-7"><a href="hmsc-setup.html#cb61-7" tabindex="-1"></a>      thin<span class="ot">=</span>modelchains[i,<span class="dv">3</span>]</span>
-<span id="cb61-8"><a href="hmsc-setup.html#cb61-8" tabindex="-1"></a>      executablename <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;hmsc/exe_&quot;</span>,modelname,<span class="st">&quot;_&quot;</span>,sample,<span class="st">&quot;_&quot;</span>,thin,<span class="st">&quot;.sh&quot;</span>)</span>
-<span id="cb61-9"><a href="hmsc-setup.html#cb61-9" tabindex="-1"></a>      fitname <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;fit_&quot;</span>,modelname,<span class="st">&quot;_&quot;</span>,sample,<span class="st">&quot;_&quot;</span>,thin,<span class="st">&quot;.Rdata&quot;</span>)</span>
-<span id="cb61-10"><a href="hmsc-setup.html#cb61-10" tabindex="-1"></a>      convname <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;conv_&quot;</span>,modelname,<span class="st">&quot;_&quot;</span>,sample,<span class="st">&quot;_&quot;</span>,thin,<span class="st">&quot;.Rdata&quot;</span>)</span>
-<span id="cb61-11"><a href="hmsc-setup.html#cb61-11" tabindex="-1"></a>      model <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&#39;model_list$&#39;</span>,modelname)</span>
-<span id="cb61-12"><a href="hmsc-setup.html#cb61-12" tabindex="-1"></a>      psrf.beta.name <span class="ot">&lt;-</span>  <span class="fu">paste0</span>(<span class="st">&quot;psrf.beta.&quot;</span>,modelname,<span class="st">&quot;_&quot;</span>,sample,<span class="st">&quot;_&quot;</span>,thin)</span>
-<span id="cb61-13"><a href="hmsc-setup.html#cb61-13" tabindex="-1"></a>      psrf.gamma.name <span class="ot">&lt;-</span>  <span class="fu">paste0</span>(<span class="st">&quot;psrf.gamma.&quot;</span>,modelname,<span class="st">&quot;_&quot;</span>,sample,<span class="st">&quot;_&quot;</span>,thin)</span>
-<span id="cb61-14"><a href="hmsc-setup.html#cb61-14" tabindex="-1"></a>      psrf.rho.name <span class="ot">&lt;-</span>  <span class="fu">paste0</span>(<span class="st">&quot;psrf.rho.&quot;</span>,modelname,<span class="st">&quot;_&quot;</span>,sample,<span class="st">&quot;_&quot;</span>,thin)</span>
-<span id="cb61-15"><a href="hmsc-setup.html#cb61-15" tabindex="-1"></a>      jobname <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;hmsc_&quot;</span>,modelname,<span class="st">&quot;_&quot;</span>,sample,<span class="st">&quot;_&quot;</span>,thin)</span>
-<span id="cb61-16"><a href="hmsc-setup.html#cb61-16" tabindex="-1"></a>      minutes <span class="ot">&lt;-</span> <span class="dv">1000</span></span>
-<span id="cb61-17"><a href="hmsc-setup.html#cb61-17" tabindex="-1"></a>      code <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">&quot;#!/bin/bash</span></span>
-<span id="cb61-18"><a href="hmsc-setup.html#cb61-18" tabindex="-1"></a><span class="st">#SBATCH --job-name=%s                   # Job name</span></span>
-<span id="cb61-19"><a href="hmsc-setup.html#cb61-19" tabindex="-1"></a><span class="st">#SBATCH --nodes=1</span></span>
-<span id="cb61-20"><a href="hmsc-setup.html#cb61-20" tabindex="-1"></a><span class="st">#SBATCH --ntasks=4                      # Run on 4 CPUs</span></span>
-<span id="cb61-21"><a href="hmsc-setup.html#cb61-21" tabindex="-1"></a><span class="st">#SBATCH --mail-user=antton.alberdi@sund.ku.dk</span></span>
-<span id="cb61-22"><a href="hmsc-setup.html#cb61-22" tabindex="-1"></a><span class="st">#SBATCH --mem=96gb                      # Job memory request</span></span>
-<span id="cb61-23"><a href="hmsc-setup.html#cb61-23" tabindex="-1"></a><span class="st">#SBATCH --time=%d                       # In minutes</span></span>
-<span id="cb61-24"><a href="hmsc-setup.html#cb61-24" tabindex="-1"></a></span>
-<span id="cb61-25"><a href="hmsc-setup.html#cb61-25" tabindex="-1"></a><span class="st"># Activate conda environment</span></span>
-<span id="cb61-26"><a href="hmsc-setup.html#cb61-26" tabindex="-1"></a><span class="st">module load mamba/1.3.1</span></span>
-<span id="cb61-27"><a href="hmsc-setup.html#cb61-27" tabindex="-1"></a><span class="st">source activate /maps/projects/mjolnir1/people/jpl786/AMAC001_fibre_trial/hmsc/hmsc_env</span></span>
-<span id="cb61-28"><a href="hmsc-setup.html#cb61-28" tabindex="-1"></a></span>
-<span id="cb61-29"><a href="hmsc-setup.html#cb61-29" tabindex="-1"></a><span class="st"># Run R script</span></span>
-<span id="cb61-30"><a href="hmsc-setup.html#cb61-30" tabindex="-1"></a><span class="st">Rscript -e &#39;</span></span>
-<span id="cb61-31"><a href="hmsc-setup.html#cb61-31" tabindex="-1"></a><span class="st">library(tidyverse)</span></span>
-<span id="cb61-32"><a href="hmsc-setup.html#cb61-32" tabindex="-1"></a><span class="st">library(Hmsc)</span></span>
-<span id="cb61-33"><a href="hmsc-setup.html#cb61-33" tabindex="-1"></a><span class="st"># Load formulas and data</span></span>
-<span id="cb61-34"><a href="hmsc-setup.html#cb61-34" tabindex="-1"></a><span class="st">load(</span><span class="sc">\&quot;</span><span class="st">hmsc.Rdata</span><span class="sc">\&quot;</span><span class="st">)</span></span>
-<span id="cb61-35"><a href="hmsc-setup.html#cb61-35" tabindex="-1"></a></span>
-<span id="cb61-36"><a href="hmsc-setup.html#cb61-36" tabindex="-1"></a><span class="st"># Declare placeholders</span></span>
-<span id="cb61-37"><a href="hmsc-setup.html#cb61-37" tabindex="-1"></a><span class="st">modelname = </span><span class="sc">\&quot;</span><span class="st">%s</span><span class="sc">\&quot;</span></span>
-<span id="cb61-38"><a href="hmsc-setup.html#cb61-38" tabindex="-1"></a><span class="st">model = %s</span></span>
-<span id="cb61-39"><a href="hmsc-setup.html#cb61-39" tabindex="-1"></a><span class="st">fitname = </span><span class="sc">\&quot;</span><span class="st">%s</span><span class="sc">\&quot;</span></span>
-<span id="cb61-40"><a href="hmsc-setup.html#cb61-40" tabindex="-1"></a><span class="st">convname = </span><span class="sc">\&quot;</span><span class="st">%s</span><span class="sc">\&quot;</span></span>
-<span id="cb61-41"><a href="hmsc-setup.html#cb61-41" tabindex="-1"></a><span class="st">sample = %d</span></span>
-<span id="cb61-42"><a href="hmsc-setup.html#cb61-42" tabindex="-1"></a><span class="st">thin = %d</span></span>
-<span id="cb61-43"><a href="hmsc-setup.html#cb61-43" tabindex="-1"></a><span class="st">nchains = %d</span></span>
-<span id="cb61-44"><a href="hmsc-setup.html#cb61-44" tabindex="-1"></a></span>
-<span id="cb61-45"><a href="hmsc-setup.html#cb61-45" tabindex="-1"></a><span class="st"># Run model fitting</span></span>
-<span id="cb61-46"><a href="hmsc-setup.html#cb61-46" tabindex="-1"></a><span class="st">m = sampleMcmc(hM = model, </span></span>
-<span id="cb61-47"><a href="hmsc-setup.html#cb61-47" tabindex="-1"></a><span class="st">         samples = sample, </span></span>
-<span id="cb61-48"><a href="hmsc-setup.html#cb61-48" tabindex="-1"></a><span class="st">         thin = thin,</span></span>
-<span id="cb61-49"><a href="hmsc-setup.html#cb61-49" tabindex="-1"></a><span class="st">         adaptNf=rep(ceiling(0.4*sample*thin),model$nr),</span></span>
-<span id="cb61-50"><a href="hmsc-setup.html#cb61-50" tabindex="-1"></a><span class="st">         transient = ceiling(0.5*sample*thin),</span></span>
-<span id="cb61-51"><a href="hmsc-setup.html#cb61-51" tabindex="-1"></a><span class="st">         nChains = nchains,</span></span>
-<span id="cb61-52"><a href="hmsc-setup.html#cb61-52" tabindex="-1"></a><span class="st">         nParallel = nchains)</span></span>
-<span id="cb61-53"><a href="hmsc-setup.html#cb61-53" tabindex="-1"></a><span class="st">         </span></span>
-<span id="cb61-54"><a href="hmsc-setup.html#cb61-54" tabindex="-1"></a><span class="st"># Assess chain convergence</span></span>
-<span id="cb61-55"><a href="hmsc-setup.html#cb61-55" tabindex="-1"></a><span class="st">mpost = convertToCodaObject(m, </span></span>
-<span id="cb61-56"><a href="hmsc-setup.html#cb61-56" tabindex="-1"></a><span class="st">      spNamesNumbers = c(T,F), </span></span>
-<span id="cb61-57"><a href="hmsc-setup.html#cb61-57" tabindex="-1"></a><span class="st">      covNamesNumbers = c(T,F),</span></span>
-<span id="cb61-58"><a href="hmsc-setup.html#cb61-58" tabindex="-1"></a><span class="st">      Beta = TRUE,</span></span>
-<span id="cb61-59"><a href="hmsc-setup.html#cb61-59" tabindex="-1"></a><span class="st">      Gamma = TRUE,</span></span>
-<span id="cb61-60"><a href="hmsc-setup.html#cb61-60" tabindex="-1"></a><span class="st">      V = FALSE,</span></span>
-<span id="cb61-61"><a href="hmsc-setup.html#cb61-61" tabindex="-1"></a><span class="st">      Sigma = FALSE,</span></span>
-<span id="cb61-62"><a href="hmsc-setup.html#cb61-62" tabindex="-1"></a><span class="st">      Rho = TRUE,</span></span>
-<span id="cb61-63"><a href="hmsc-setup.html#cb61-63" tabindex="-1"></a><span class="st">      Eta = FALSE,</span></span>
-<span id="cb61-64"><a href="hmsc-setup.html#cb61-64" tabindex="-1"></a><span class="st">      Lambda = FALSE,</span></span>
-<span id="cb61-65"><a href="hmsc-setup.html#cb61-65" tabindex="-1"></a><span class="st">      Alpha = FALSE,</span></span>
-<span id="cb61-66"><a href="hmsc-setup.html#cb61-66" tabindex="-1"></a><span class="st">      Omega = FALSE,</span></span>
-<span id="cb61-67"><a href="hmsc-setup.html#cb61-67" tabindex="-1"></a><span class="st">      Psi = FALSE,</span></span>
-<span id="cb61-68"><a href="hmsc-setup.html#cb61-68" tabindex="-1"></a><span class="st">      Delta = FALSE) # Convert to CODA object</span></span>
-<span id="cb61-69"><a href="hmsc-setup.html#cb61-69" tabindex="-1"></a></span>
-<span id="cb61-70"><a href="hmsc-setup.html#cb61-70" tabindex="-1"></a><span class="st"># Fixed effects</span></span>
-<span id="cb61-71"><a href="hmsc-setup.html#cb61-71" tabindex="-1"></a><span class="st">assign(paste0(</span><span class="sc">\&quot;</span><span class="st">psrf.beta.</span><span class="sc">\&quot;</span><span class="st">, modelname,</span><span class="sc">\&quot;</span><span class="st">_</span><span class="sc">\&quot;</span><span class="st">,sample,</span><span class="sc">\&quot;</span><span class="st">_</span><span class="sc">\&quot;</span><span class="st">,thin), gelman.diag(mpost$Beta,multivariate=FALSE)$psrf)</span></span>
-<span id="cb61-72"><a href="hmsc-setup.html#cb61-72" tabindex="-1"></a></span>
-<span id="cb61-73"><a href="hmsc-setup.html#cb61-73" tabindex="-1"></a><span class="st"># Traits</span></span>
-<span id="cb61-74"><a href="hmsc-setup.html#cb61-74" tabindex="-1"></a><span class="st">assign(paste0(</span><span class="sc">\&quot;</span><span class="st">psrf.gamma.</span><span class="sc">\&quot;</span><span class="st">, modelname,</span><span class="sc">\&quot;</span><span class="st">_</span><span class="sc">\&quot;</span><span class="st">,sample,</span><span class="sc">\&quot;</span><span class="st">_</span><span class="sc">\&quot;</span><span class="st">,thin), gelman.diag(mpost$Gamma,multivariate=FALSE)$psrf)</span></span>
-<span id="cb61-75"><a href="hmsc-setup.html#cb61-75" tabindex="-1"></a></span>
-<span id="cb61-76"><a href="hmsc-setup.html#cb61-76" tabindex="-1"></a><span class="st"># Phylogeny</span></span>
-<span id="cb61-77"><a href="hmsc-setup.html#cb61-77" tabindex="-1"></a><span class="st">assign(paste0(</span><span class="sc">\&quot;</span><span class="st">psrf.rho.</span><span class="sc">\&quot;</span><span class="st">, modelname,</span><span class="sc">\&quot;</span><span class="st">_</span><span class="sc">\&quot;</span><span class="st">,sample,</span><span class="sc">\&quot;</span><span class="st">_</span><span class="sc">\&quot;</span><span class="st">,thin), gelman.diag(mpost$Rho,multivariate=FALSE)$psrf)</span></span>
-<span id="cb61-78"><a href="hmsc-setup.html#cb61-78" tabindex="-1"></a></span>
-<span id="cb61-79"><a href="hmsc-setup.html#cb61-79" tabindex="-1"></a><span class="st"># Write convergence data</span></span>
-<span id="cb61-80"><a href="hmsc-setup.html#cb61-80" tabindex="-1"></a><span class="st">save(%s, %s, %s, file=convname)</span></span>
-<span id="cb61-81"><a href="hmsc-setup.html#cb61-81" tabindex="-1"></a></span>
-<span id="cb61-82"><a href="hmsc-setup.html#cb61-82" tabindex="-1"></a><span class="st"># Save model fit object</span></span>
-<span id="cb61-83"><a href="hmsc-setup.html#cb61-83" tabindex="-1"></a><span class="st">save(m, file=fitname)</span></span>
-<span id="cb61-84"><a href="hmsc-setup.html#cb61-84" tabindex="-1"></a><span class="st">&#39;</span></span>
-<span id="cb61-85"><a href="hmsc-setup.html#cb61-85" tabindex="-1"></a><span class="st">&quot;</span>, jobname, minutes, modelname, model, fitname, convname, sample, thin, nChains, psrf.beta.name, psrf.gamma.name, psrf.rho.name)</span>
-<span id="cb61-86"><a href="hmsc-setup.html#cb61-86" tabindex="-1"></a>      <span class="fu">writeLines</span>(code, executablename)</span>
-<span id="cb61-87"><a href="hmsc-setup.html#cb61-87" tabindex="-1"></a>    }</span></code></pre></div>
+<div class="sourceCode" id="cb62"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb62-1"><a href="hmsc-setup.html#cb62-1" tabindex="-1"></a>modelchains <span class="ot">&lt;-</span> <span class="fu">expand.grid</span>(<span class="at">model =</span> <span class="fu">names</span>(model_list), <span class="at">sample =</span> MCMC_samples_list, <span class="at">thin =</span> MCMC_thin_list)</span>
+<span id="cb62-2"><a href="hmsc-setup.html#cb62-2" tabindex="-1"></a></span>
+<span id="cb62-3"><a href="hmsc-setup.html#cb62-3" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">dir.exists</span>(<span class="st">&quot;hmsc&quot;</span>)){<span class="fu">dir.create</span>(<span class="st">&quot;hmsc&quot;</span>)}</span>
+<span id="cb62-4"><a href="hmsc-setup.html#cb62-4" tabindex="-1"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(modelchains))){</span>
+<span id="cb62-5"><a href="hmsc-setup.html#cb62-5" tabindex="-1"></a>      modelname<span class="ot">=</span><span class="fu">as.character</span>(modelchains[i,<span class="dv">1</span>])</span>
+<span id="cb62-6"><a href="hmsc-setup.html#cb62-6" tabindex="-1"></a>      sample<span class="ot">=</span>modelchains[i,<span class="dv">2</span>]</span>
+<span id="cb62-7"><a href="hmsc-setup.html#cb62-7" tabindex="-1"></a>      thin<span class="ot">=</span>modelchains[i,<span class="dv">3</span>]</span>
+<span id="cb62-8"><a href="hmsc-setup.html#cb62-8" tabindex="-1"></a>      executablename <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;hmsc/exe_&quot;</span>,modelname,<span class="st">&quot;_&quot;</span>,sample,<span class="st">&quot;_&quot;</span>,thin,<span class="st">&quot;.sh&quot;</span>)</span>
+<span id="cb62-9"><a href="hmsc-setup.html#cb62-9" tabindex="-1"></a>      fitname <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;fit_&quot;</span>,modelname,<span class="st">&quot;_&quot;</span>,sample,<span class="st">&quot;_&quot;</span>,thin,<span class="st">&quot;.Rdata&quot;</span>)</span>
+<span id="cb62-10"><a href="hmsc-setup.html#cb62-10" tabindex="-1"></a>      convname <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;conv_&quot;</span>,modelname,<span class="st">&quot;_&quot;</span>,sample,<span class="st">&quot;_&quot;</span>,thin,<span class="st">&quot;.Rdata&quot;</span>)</span>
+<span id="cb62-11"><a href="hmsc-setup.html#cb62-11" tabindex="-1"></a>      model <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&#39;model_list$&#39;</span>,modelname)</span>
+<span id="cb62-12"><a href="hmsc-setup.html#cb62-12" tabindex="-1"></a>      psrf.beta.name <span class="ot">&lt;-</span>  <span class="fu">paste0</span>(<span class="st">&quot;psrf.beta.&quot;</span>,modelname,<span class="st">&quot;_&quot;</span>,sample,<span class="st">&quot;_&quot;</span>,thin)</span>
+<span id="cb62-13"><a href="hmsc-setup.html#cb62-13" tabindex="-1"></a>      psrf.gamma.name <span class="ot">&lt;-</span>  <span class="fu">paste0</span>(<span class="st">&quot;psrf.gamma.&quot;</span>,modelname,<span class="st">&quot;_&quot;</span>,sample,<span class="st">&quot;_&quot;</span>,thin)</span>
+<span id="cb62-14"><a href="hmsc-setup.html#cb62-14" tabindex="-1"></a>      psrf.rho.name <span class="ot">&lt;-</span>  <span class="fu">paste0</span>(<span class="st">&quot;psrf.rho.&quot;</span>,modelname,<span class="st">&quot;_&quot;</span>,sample,<span class="st">&quot;_&quot;</span>,thin)</span>
+<span id="cb62-15"><a href="hmsc-setup.html#cb62-15" tabindex="-1"></a>      jobname <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;hmsc_&quot;</span>,modelname,<span class="st">&quot;_&quot;</span>,sample,<span class="st">&quot;_&quot;</span>,thin)</span>
+<span id="cb62-16"><a href="hmsc-setup.html#cb62-16" tabindex="-1"></a>      minutes <span class="ot">&lt;-</span> <span class="dv">1000</span></span>
+<span id="cb62-17"><a href="hmsc-setup.html#cb62-17" tabindex="-1"></a>      code <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">&quot;#!/bin/bash</span></span>
+<span id="cb62-18"><a href="hmsc-setup.html#cb62-18" tabindex="-1"></a><span class="st">#SBATCH --job-name=%s                   # Job name</span></span>
+<span id="cb62-19"><a href="hmsc-setup.html#cb62-19" tabindex="-1"></a><span class="st">#SBATCH --nodes=1</span></span>
+<span id="cb62-20"><a href="hmsc-setup.html#cb62-20" tabindex="-1"></a><span class="st">#SBATCH --ntasks=4                      # Run on 4 CPUs</span></span>
+<span id="cb62-21"><a href="hmsc-setup.html#cb62-21" tabindex="-1"></a><span class="st">#SBATCH --mail-user=antton.alberdi@sund.ku.dk</span></span>
+<span id="cb62-22"><a href="hmsc-setup.html#cb62-22" tabindex="-1"></a><span class="st">#SBATCH --mem=96gb                      # Job memory request</span></span>
+<span id="cb62-23"><a href="hmsc-setup.html#cb62-23" tabindex="-1"></a><span class="st">#SBATCH --time=%d                       # In minutes</span></span>
+<span id="cb62-24"><a href="hmsc-setup.html#cb62-24" tabindex="-1"></a></span>
+<span id="cb62-25"><a href="hmsc-setup.html#cb62-25" tabindex="-1"></a><span class="st"># Activate conda environment</span></span>
+<span id="cb62-26"><a href="hmsc-setup.html#cb62-26" tabindex="-1"></a><span class="st">module load mamba/1.3.1</span></span>
+<span id="cb62-27"><a href="hmsc-setup.html#cb62-27" tabindex="-1"></a><span class="st">source activate /maps/projects/mjolnir1/people/jpl786/AMAC001_fibre_trial/hmsc/hmsc_env</span></span>
+<span id="cb62-28"><a href="hmsc-setup.html#cb62-28" tabindex="-1"></a></span>
+<span id="cb62-29"><a href="hmsc-setup.html#cb62-29" tabindex="-1"></a><span class="st"># Run R script</span></span>
+<span id="cb62-30"><a href="hmsc-setup.html#cb62-30" tabindex="-1"></a><span class="st">Rscript -e &#39;</span></span>
+<span id="cb62-31"><a href="hmsc-setup.html#cb62-31" tabindex="-1"></a><span class="st">library(tidyverse)</span></span>
+<span id="cb62-32"><a href="hmsc-setup.html#cb62-32" tabindex="-1"></a><span class="st">library(Hmsc)</span></span>
+<span id="cb62-33"><a href="hmsc-setup.html#cb62-33" tabindex="-1"></a><span class="st"># Load formulas and data</span></span>
+<span id="cb62-34"><a href="hmsc-setup.html#cb62-34" tabindex="-1"></a><span class="st">load(</span><span class="sc">\&quot;</span><span class="st">hmsc.Rdata</span><span class="sc">\&quot;</span><span class="st">)</span></span>
+<span id="cb62-35"><a href="hmsc-setup.html#cb62-35" tabindex="-1"></a></span>
+<span id="cb62-36"><a href="hmsc-setup.html#cb62-36" tabindex="-1"></a><span class="st"># Declare placeholders</span></span>
+<span id="cb62-37"><a href="hmsc-setup.html#cb62-37" tabindex="-1"></a><span class="st">modelname = </span><span class="sc">\&quot;</span><span class="st">%s</span><span class="sc">\&quot;</span></span>
+<span id="cb62-38"><a href="hmsc-setup.html#cb62-38" tabindex="-1"></a><span class="st">model = %s</span></span>
+<span id="cb62-39"><a href="hmsc-setup.html#cb62-39" tabindex="-1"></a><span class="st">fitname = </span><span class="sc">\&quot;</span><span class="st">%s</span><span class="sc">\&quot;</span></span>
+<span id="cb62-40"><a href="hmsc-setup.html#cb62-40" tabindex="-1"></a><span class="st">convname = </span><span class="sc">\&quot;</span><span class="st">%s</span><span class="sc">\&quot;</span></span>
+<span id="cb62-41"><a href="hmsc-setup.html#cb62-41" tabindex="-1"></a><span class="st">sample = %d</span></span>
+<span id="cb62-42"><a href="hmsc-setup.html#cb62-42" tabindex="-1"></a><span class="st">thin = %d</span></span>
+<span id="cb62-43"><a href="hmsc-setup.html#cb62-43" tabindex="-1"></a><span class="st">nchains = %d</span></span>
+<span id="cb62-44"><a href="hmsc-setup.html#cb62-44" tabindex="-1"></a></span>
+<span id="cb62-45"><a href="hmsc-setup.html#cb62-45" tabindex="-1"></a><span class="st"># Run model fitting</span></span>
+<span id="cb62-46"><a href="hmsc-setup.html#cb62-46" tabindex="-1"></a><span class="st">m = sampleMcmc(hM = model, </span></span>
+<span id="cb62-47"><a href="hmsc-setup.html#cb62-47" tabindex="-1"></a><span class="st">         samples = sample, </span></span>
+<span id="cb62-48"><a href="hmsc-setup.html#cb62-48" tabindex="-1"></a><span class="st">         thin = thin,</span></span>
+<span id="cb62-49"><a href="hmsc-setup.html#cb62-49" tabindex="-1"></a><span class="st">         adaptNf=rep(ceiling(0.4*sample*thin),model$nr),</span></span>
+<span id="cb62-50"><a href="hmsc-setup.html#cb62-50" tabindex="-1"></a><span class="st">         transient = ceiling(0.5*sample*thin),</span></span>
+<span id="cb62-51"><a href="hmsc-setup.html#cb62-51" tabindex="-1"></a><span class="st">         nChains = nchains,</span></span>
+<span id="cb62-52"><a href="hmsc-setup.html#cb62-52" tabindex="-1"></a><span class="st">         nParallel = nchains)</span></span>
+<span id="cb62-53"><a href="hmsc-setup.html#cb62-53" tabindex="-1"></a><span class="st">         </span></span>
+<span id="cb62-54"><a href="hmsc-setup.html#cb62-54" tabindex="-1"></a><span class="st"># Assess chain convergence</span></span>
+<span id="cb62-55"><a href="hmsc-setup.html#cb62-55" tabindex="-1"></a><span class="st">mpost = convertToCodaObject(m, </span></span>
+<span id="cb62-56"><a href="hmsc-setup.html#cb62-56" tabindex="-1"></a><span class="st">      spNamesNumbers = c(T,F), </span></span>
+<span id="cb62-57"><a href="hmsc-setup.html#cb62-57" tabindex="-1"></a><span class="st">      covNamesNumbers = c(T,F),</span></span>
+<span id="cb62-58"><a href="hmsc-setup.html#cb62-58" tabindex="-1"></a><span class="st">      Beta = TRUE,</span></span>
+<span id="cb62-59"><a href="hmsc-setup.html#cb62-59" tabindex="-1"></a><span class="st">      Gamma = TRUE,</span></span>
+<span id="cb62-60"><a href="hmsc-setup.html#cb62-60" tabindex="-1"></a><span class="st">      V = FALSE,</span></span>
+<span id="cb62-61"><a href="hmsc-setup.html#cb62-61" tabindex="-1"></a><span class="st">      Sigma = FALSE,</span></span>
+<span id="cb62-62"><a href="hmsc-setup.html#cb62-62" tabindex="-1"></a><span class="st">      Rho = TRUE,</span></span>
+<span id="cb62-63"><a href="hmsc-setup.html#cb62-63" tabindex="-1"></a><span class="st">      Eta = FALSE,</span></span>
+<span id="cb62-64"><a href="hmsc-setup.html#cb62-64" tabindex="-1"></a><span class="st">      Lambda = FALSE,</span></span>
+<span id="cb62-65"><a href="hmsc-setup.html#cb62-65" tabindex="-1"></a><span class="st">      Alpha = FALSE,</span></span>
+<span id="cb62-66"><a href="hmsc-setup.html#cb62-66" tabindex="-1"></a><span class="st">      Omega = FALSE,</span></span>
+<span id="cb62-67"><a href="hmsc-setup.html#cb62-67" tabindex="-1"></a><span class="st">      Psi = FALSE,</span></span>
+<span id="cb62-68"><a href="hmsc-setup.html#cb62-68" tabindex="-1"></a><span class="st">      Delta = FALSE) # Convert to CODA object</span></span>
+<span id="cb62-69"><a href="hmsc-setup.html#cb62-69" tabindex="-1"></a></span>
+<span id="cb62-70"><a href="hmsc-setup.html#cb62-70" tabindex="-1"></a><span class="st"># Fixed effects</span></span>
+<span id="cb62-71"><a href="hmsc-setup.html#cb62-71" tabindex="-1"></a><span class="st">assign(paste0(</span><span class="sc">\&quot;</span><span class="st">psrf.beta.</span><span class="sc">\&quot;</span><span class="st">, modelname,</span><span class="sc">\&quot;</span><span class="st">_</span><span class="sc">\&quot;</span><span class="st">,sample,</span><span class="sc">\&quot;</span><span class="st">_</span><span class="sc">\&quot;</span><span class="st">,thin), gelman.diag(mpost$Beta,multivariate=FALSE)$psrf)</span></span>
+<span id="cb62-72"><a href="hmsc-setup.html#cb62-72" tabindex="-1"></a></span>
+<span id="cb62-73"><a href="hmsc-setup.html#cb62-73" tabindex="-1"></a><span class="st"># Traits</span></span>
+<span id="cb62-74"><a href="hmsc-setup.html#cb62-74" tabindex="-1"></a><span class="st">assign(paste0(</span><span class="sc">\&quot;</span><span class="st">psrf.gamma.</span><span class="sc">\&quot;</span><span class="st">, modelname,</span><span class="sc">\&quot;</span><span class="st">_</span><span class="sc">\&quot;</span><span class="st">,sample,</span><span class="sc">\&quot;</span><span class="st">_</span><span class="sc">\&quot;</span><span class="st">,thin), gelman.diag(mpost$Gamma,multivariate=FALSE)$psrf)</span></span>
+<span id="cb62-75"><a href="hmsc-setup.html#cb62-75" tabindex="-1"></a></span>
+<span id="cb62-76"><a href="hmsc-setup.html#cb62-76" tabindex="-1"></a><span class="st"># Phylogeny</span></span>
+<span id="cb62-77"><a href="hmsc-setup.html#cb62-77" tabindex="-1"></a><span class="st">assign(paste0(</span><span class="sc">\&quot;</span><span class="st">psrf.rho.</span><span class="sc">\&quot;</span><span class="st">, modelname,</span><span class="sc">\&quot;</span><span class="st">_</span><span class="sc">\&quot;</span><span class="st">,sample,</span><span class="sc">\&quot;</span><span class="st">_</span><span class="sc">\&quot;</span><span class="st">,thin), gelman.diag(mpost$Rho,multivariate=FALSE)$psrf)</span></span>
+<span id="cb62-78"><a href="hmsc-setup.html#cb62-78" tabindex="-1"></a></span>
+<span id="cb62-79"><a href="hmsc-setup.html#cb62-79" tabindex="-1"></a><span class="st"># Write convergence data</span></span>
+<span id="cb62-80"><a href="hmsc-setup.html#cb62-80" tabindex="-1"></a><span class="st">save(%s, %s, %s, file=convname)</span></span>
+<span id="cb62-81"><a href="hmsc-setup.html#cb62-81" tabindex="-1"></a></span>
+<span id="cb62-82"><a href="hmsc-setup.html#cb62-82" tabindex="-1"></a><span class="st"># Save model fit object</span></span>
+<span id="cb62-83"><a href="hmsc-setup.html#cb62-83" tabindex="-1"></a><span class="st">save(m, file=fitname)</span></span>
+<span id="cb62-84"><a href="hmsc-setup.html#cb62-84" tabindex="-1"></a><span class="st">&#39;</span></span>
+<span id="cb62-85"><a href="hmsc-setup.html#cb62-85" tabindex="-1"></a><span class="st">&quot;</span>, jobname, minutes, modelname, model, fitname, convname, sample, thin, nChains, psrf.beta.name, psrf.gamma.name, psrf.rho.name)</span>
+<span id="cb62-86"><a href="hmsc-setup.html#cb62-86" tabindex="-1"></a>      <span class="fu">writeLines</span>(code, executablename)</span>
+<span id="cb62-87"><a href="hmsc-setup.html#cb62-87" tabindex="-1"></a>    }</span></code></pre></div>
 <p>Upload the produced <strong>hmsc/exe_XXXXX.sh</strong> files to the HPC respecting the directory structure.</p>
 </div>
 <div id="fit-hmsc-models-in-mjolnir-hpc" class="section level2 hasAnchor" number="7.6">
 <h2><span class="header-section-number">7.6</span> Fit Hmsc models (in Mjolnir HPC)<a href="hmsc-setup.html#fit-hmsc-models-in-mjolnir-hpc" class="anchor-section" aria-label="Anchor link to header"></a></h2>
 <p>Launch the SLURM jobs by using:</p>
-<div class="sourceCode" id="cb62"><pre class="sourceCode sh script-source"><code class="sourceCode bash"><span id="cb62-1"><a href="hmsc-setup.html#cb62-1" tabindex="-1"></a><span class="co">#Create and define tmpdir</span></span>
-<span id="cb62-2"><a href="hmsc-setup.html#cb62-2" tabindex="-1"></a><span class="va">tmpdir</span><span class="op">=</span><span class="st">&quot;./tmp&quot;</span></span>
-<span id="cb62-3"><a href="hmsc-setup.html#cb62-3" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> <span class="st">&quot;</span><span class="va">$tmpdir</span><span class="st">&quot;</span></span>
-<span id="cb62-4"><a href="hmsc-setup.html#cb62-4" tabindex="-1"></a><span class="bu">export</span> <span class="va">TMPDIR</span><span class="op">=</span><span class="st">&quot;</span><span class="va">$tmpdir</span><span class="st">&quot;</span></span>
-<span id="cb62-5"><a href="hmsc-setup.html#cb62-5" tabindex="-1"></a></span>
-<span id="cb62-6"><a href="hmsc-setup.html#cb62-6" tabindex="-1"></a><span class="co">#Or launch them one by one only the ones you want to launch</span></span>
-<span id="cb62-7"><a href="hmsc-setup.html#cb62-7" tabindex="-1"></a><span class="ex">sbatch</span> exe_model1_250_1.sh</span></code></pre></div>
+<div class="sourceCode" id="cb63"><pre class="sourceCode sh script-source"><code class="sourceCode bash"><span id="cb63-1"><a href="hmsc-setup.html#cb63-1" tabindex="-1"></a><span class="co">#Create and define tmpdir</span></span>
+<span id="cb63-2"><a href="hmsc-setup.html#cb63-2" tabindex="-1"></a><span class="va">tmpdir</span><span class="op">=</span><span class="st">&quot;./tmp&quot;</span></span>
+<span id="cb63-3"><a href="hmsc-setup.html#cb63-3" tabindex="-1"></a><span class="fu">mkdir</span> <span class="at">-p</span> <span class="st">&quot;</span><span class="va">$tmpdir</span><span class="st">&quot;</span></span>
+<span id="cb63-4"><a href="hmsc-setup.html#cb63-4" tabindex="-1"></a><span class="bu">export</span> <span class="va">TMPDIR</span><span class="op">=</span><span class="st">&quot;</span><span class="va">$tmpdir</span><span class="st">&quot;</span></span>
+<span id="cb63-5"><a href="hmsc-setup.html#cb63-5" tabindex="-1"></a></span>
+<span id="cb63-6"><a href="hmsc-setup.html#cb63-6" tabindex="-1"></a><span class="co">#Or launch them one by one only the ones you want to launch</span></span>
+<span id="cb63-7"><a href="hmsc-setup.html#cb63-7" tabindex="-1"></a><span class="ex">sbatch</span> exe_model1_250_1.sh</span></code></pre></div>
 
 </div>
 </div>

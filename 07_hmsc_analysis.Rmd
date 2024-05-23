@@ -38,6 +38,7 @@ varpart_table <- varpart$vals %>%
 
 #Phylums
 phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
+    mutate(phylum=str_remove_all(phylum, "p__"))%>%
   right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
     filter(genome %in% varpart_tree$tip.label) %>%
     arrange(match(genome, varpart_tree$tip.label)) %>%
@@ -46,6 +47,7 @@ phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI
     select(phylum)
 
 colors_alphabetic <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
+    mutate(phylum=str_remove_all(phylum, "p__"))%>%
   right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
     filter(genome %in% varpart_tree$tip.label) %>%
     arrange(match(genome, varpart_tree$tip.label)) %>%
@@ -229,103 +231,7 @@ pred <- constructGradient(m,
 ```
 
 
-#### Function level
 
-```{r hmsc_origin_function_predictions, warning=FALSE, comments="", message=FALSE}
-functions_table <- elements_table %>%
-    to.functions(., GIFT_db) %>%
-    as.data.frame()
-
-community_functions <- pred %>%
-  group_by(origin, genome) %>%
-  mutate(row_id = row_number()) %>%
-  pivot_wider(names_from = genome, values_from = value) %>%
-  ungroup() %>%
-  group_split(row_id) %>%
-  as.list() %>%
-  lapply(., FUN = function(x){x %>%
-    select(-row_id) %>%
-    column_to_rownames(var = "origin") %>%
-    as.data.frame() %>%
-    exp() %>%
-    t() %>%
-    tss() %>%
-    to.community(functions_table,.,GIFT_db) %>% 
-    as.data.frame() %>%
-    rownames_to_column(var="origin")
-   })
-```
-
-```{r hmsc_origin_function_predictions_model, warning=FALSE, comments="", message=FALSE}
-#max-min option
-calculate_slope <- function(x) {
-  lm_fit <- lm(unlist(x) ~ seq_along(unlist(x)))
-  coef(lm_fit)[2]
-}
-
-function_predictions <- map_dfc(community_functions, function(mat) {
-      mat %>%
-        column_to_rownames(var = "origin") %>%
-        t() %>%
-        as.data.frame() %>%
-        rowwise() %>%
-        mutate(slope = calculate_slope(c_across(everything()))) %>%
-        select(slope) }) %>%
-      t() %>%
-      as.data.frame() %>%
-      set_names(colnames(community_functions[[1]])[-1]) %>%
-      rownames_to_column(var="iteration") %>%
-      pivot_longer(!iteration, names_to="trait",values_to="value") %>%
-      group_by(trait) %>%
-      summarise(mean=mean(value),
-        p1 = quantile(value, probs = 0.1),
-        p9 = quantile(value, probs = 0.9),
-        positive_support = sum(value > 0)/1000,
-        negative_support = sum(value < 0)/1000) %>%
-      arrange(-positive_support)
-
-# Positively associated
-function_predictions %>%
-  filter(mean >0) %>%
-  arrange(-positive_support) %>%
-  tt()
-
-# Negatively associated
-function_predictions %>%
-  filter(mean <0) %>%
-  arrange(-negative_support) %>%
-  tt()
-```
-
-
-```{r hmsc_origin_function_significant_plot, warning=FALSE, comments="", message=FALSE}
-
-positive <- function_predictions %>%
-  filter(mean >0) %>%
-  arrange(mean) %>%
-  filter(positive_support>=0.9) %>%
-  select(-negative_support) %>%
-  rename(support=positive_support)
-
-negative <- function_predictions %>%
-  filter(mean <0) %>%
-  arrange(mean) %>%
-  filter(negative_support>=0.9) %>%
-  select(-positive_support) %>%
-  rename(support=negative_support)
-
-bind_rows(positive,negative) %>%
-  left_join(GIFT_db,by=join_by(trait==Code_function)) %>%
-  mutate(trait=factor(trait,levels=c(rev(positive$trait),rev(negative$trait)))) %>%
-  ggplot(aes(x=mean, y=fct_rev(trait), xmin=p1, xmax=p9, color=Function)) +
-      geom_point() +
-      geom_errorbar() +
-      xlim(c(-0.02,0.02)) +
-      geom_vline(xintercept=0) +
-      scale_color_manual(values = c("#debc14","#440526","#dc7c17","#172742","#debc14","#440526","#dc7c17","#172742","#357379","#6c7e2c","#d8dc69","#774d35","#db717d")) +
-      theme_minimal() +
-      labs(x="Regression coefficient",y="Functional trait")
-```
 
 #### Element level
 
@@ -425,3 +331,100 @@ bind_rows(positive,negative) %>%
 ```
 
 
+#### Function level
+
+```{r hmsc_origin_function_predictions, warning=FALSE, comments="", message=FALSE}
+functions_table <- elements_table %>%
+    to.functions(., GIFT_db) %>%
+    as.data.frame()
+
+community_functions <- pred %>%
+  group_by(origin, genome) %>%
+  mutate(row_id = row_number()) %>%
+  pivot_wider(names_from = genome, values_from = value) %>%
+  ungroup() %>%
+  group_split(row_id) %>%
+  as.list() %>%
+  lapply(., FUN = function(x){x %>%
+    select(-row_id) %>%
+    column_to_rownames(var = "origin") %>%
+    as.data.frame() %>%
+    exp() %>%
+    t() %>%
+    tss() %>%
+    to.community(functions_table,.,GIFT_db) %>% 
+    as.data.frame() %>%
+    rownames_to_column(var="origin")
+   })
+```
+
+```{r hmsc_origin_function_predictions_model, warning=FALSE, comments="", message=FALSE}
+#max-min option
+calculate_slope <- function(x) {
+  lm_fit <- lm(unlist(x) ~ seq_along(unlist(x)))
+  coef(lm_fit)[2]
+}
+
+function_predictions <- map_dfc(community_functions, function(mat) {
+      mat %>%
+        column_to_rownames(var = "origin") %>%
+        t() %>%
+        as.data.frame() %>%
+        rowwise() %>%
+        mutate(slope = calculate_slope(c_across(everything()))) %>%
+        select(slope) }) %>%
+      t() %>%
+      as.data.frame() %>%
+      set_names(colnames(community_functions[[1]])[-1]) %>%
+      rownames_to_column(var="iteration") %>%
+      pivot_longer(!iteration, names_to="trait",values_to="value") %>%
+      group_by(trait) %>%
+      summarise(mean=mean(value),
+        p1 = quantile(value, probs = 0.1),
+        p9 = quantile(value, probs = 0.9),
+        positive_support = sum(value > 0)/1000,
+        negative_support = sum(value < 0)/1000) %>%
+      arrange(-positive_support)
+
+# Positively associated
+function_predictions %>%
+  filter(mean >0) %>%
+  arrange(-positive_support) %>%
+  tt()
+
+# Negatively associated
+function_predictions %>%
+  filter(mean <0) %>%
+  arrange(-negative_support) %>%
+  tt()
+```
+
+
+```{r hmsc_origin_function_significant_plot, warning=FALSE, comments="", message=FALSE}
+
+positive <- function_predictions %>%
+  filter(mean >0) %>%
+  arrange(mean) %>%
+  filter(positive_support>=0.9) %>%
+  select(-negative_support) %>%
+  rename(support=positive_support)
+
+negative <- function_predictions %>%
+  filter(mean <0) %>%
+  arrange(mean) %>%
+  filter(negative_support>=0.9) %>%
+  select(-positive_support) %>%
+  rename(support=negative_support)
+
+bind_rows(positive,negative) %>%
+  left_join(GIFT_db,by=join_by(trait==Code_function)) %>%
+  mutate(trait=factor(trait,levels=c(rev(positive$trait),rev(negative$trait)))) %>%
+  ggplot(aes(x=mean, y=fct_rev(trait), xmin=p1, xmax=p9, color=Function)) +
+      geom_point() +
+      geom_errorbar() +
+      xlim(c(-0.02,0.02)) +
+      geom_vline(xintercept=0) +
+      scale_color_manual(values = c("#debc14","#440526","#dc7c17","#172742","#debc14","#440526","#dc7c17","#172742","#357379","#6c7e2c","#d8dc69","#774d35","#db717d")) +
+      theme_minimal() +
+      labs(x="Regression coefficient",y="Functional trait")
+```
