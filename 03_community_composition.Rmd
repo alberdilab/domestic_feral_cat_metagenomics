@@ -20,13 +20,16 @@ genome_counts_filt %>%
     scale_fill_manual(values=phylum_colors) +
     facet_nested(. ~ Location + Origin,  scales="free") + #facet per day and treatment
     guides(fill = guide_legend(ncol = 1)) +
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+    theme(axis.text.x = element_blank(),
+          axis.ticks.x =element_blank(),
           axis.title.x = element_blank(),
+          axis.text.y = element_text(size=8),
+          axis.title.y = element_text(size=12),
           panel.background = element_blank(),
-          panel.border = element_blank(),
-          panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          axis.line = element_line(linewidth = 0.5, linetype = "solid", colour = "black")) +
+          axis.line = element_line(linewidth = 0.5, linetype = "solid", colour = "black"),
+          panel.border = element_rect(colour = "black", fill = NA),
+          strip.background = element_rect(fill = "white", color = "black"),
+          strip.text = element_text(size = 12, lineheight = 0.6)) +
    labs(fill="Phylum",y = "Relative abundance",x="Samples")
 ```
 
