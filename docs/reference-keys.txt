@@ -46,7 +46,12 @@ hmsc-analysis
 load-data-1
 variance-partitioning
 posterior-estimates
+positively-associated-genomes
+negatively-associated-genomes
+estimate---support-plot
 correlations
 predict-responses
 element-level
+positive-associated-functions-at-element-level
+negatively-associated-functions-at-element-level
 function-level

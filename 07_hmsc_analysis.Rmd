@@ -156,6 +156,85 @@ postestimates_tree +
         vexpand(.25, 1) # expand top 
 ```
 
+### Positively associated genomes
+
+```{r}
+getPostEstimate(hM=m, parName="Beta")$support %>%
+    as.data.frame() %>%
+    mutate(variable=m$covNames) %>%
+    pivot_longer(!variable, names_to = "genome", values_to = "value") %>%
+    mutate(trend = case_when(
+          value >= support ~ "Positive",
+          value <= negsupport ~ "Negative",
+          TRUE ~ "Neutral")) %>%
+    filter(variable=="originTame", trend=="Positive") %>%
+    arrange(-value) %>%
+    left_join(genome_metadata,by=join_by(genome==genome)) %>%
+    select(genome,phylum,class,order,family,species,value) %>%
+    arrange(phylum, class, family)%>%
+    tt()
+```
+
+### Negatively associated genomes
+
+```{r}
+getPostEstimate(hM=m, parName="Beta")$support %>%
+    as.data.frame() %>%
+    mutate(variable=m$covNames) %>%
+    pivot_longer(!variable, names_to = "genome", values_to = "value") %>%
+    mutate(trend = case_when(
+          value >= support ~ "Positive",
+          value <= negsupport ~ "Negative",
+          TRUE ~ "Neutral")) %>%
+    filter(variable=="originTame", trend=="Negative") %>%
+    arrange(value) %>%
+    left_join(genome_metadata,by=join_by(genome==genome)) %>%
+    select(genome,phylum,class,order,family,species,value) %>%
+    arrange(phylum,class,family)%>%
+    tt()
+```
+
+### Estimate - support plot
+```{r}
+estimate <- getPostEstimate(hM=m, parName="Beta")$mean %>%
+    as.data.frame() %>%
+    mutate(variable=m$covNames) %>%
+    filter(variable=="originTame") %>%
+    pivot_longer(!variable, names_to = "genome", values_to = "mean") %>%
+    select(genome,mean)
+
+support <- getPostEstimate(hM=m, parName="Beta")$support %>%
+    as.data.frame() %>%
+    mutate(variable=m$covNames) %>%
+    filter(variable=="originTame") %>%
+    pivot_longer(!variable, names_to = "genome", values_to = "support") %>%
+    select(genome,support)
+
+phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
+    right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
+    filter(genome %in% estimate$genome) %>%
+    arrange(match(genome, estimate$genome)) %>%
+     select(phylum, colors) %>%
+    unique() %>%
+    arrange(phylum) %>%
+    select(colors) %>%
+    pull()
+
+inner_join(estimate,support,by=join_by(genome==genome)) %>%
+    mutate(significance=ifelse(support >= 0.9 | support <= 0.1,1,0)) %>%
+    mutate(support=ifelse(mean<0,1-support,support)) %>%
+    left_join(genome_metadata, by = join_by(genome == genome)) %>%
+    mutate(phylum = ifelse(support > 0.9, phylum, NA)) %>%
+    ggplot(aes(x=mean,y=support,color=phylum))+
+      geom_point(alpha=0.7, shape=16, size=3)+
+      scale_color_manual(values = phylum_colors) +
+      geom_vline(xintercept = 0) +
+      xlim(c(-0.4,0.4)) +
+      labs(x = "Beta regression coefficient", y = "Posterior probability") +
+      theme_minimal()+
+       theme(legend.position = "none")
+```
+
 
 ## Correlations
 
@@ -231,8 +310,6 @@ pred <- constructGradient(m,
 ```
 
 
-
-
 #### Element level
 
 ```{r hmsc_origin_element, warning=FALSE, comments="", message=FALSE}
@@ -286,18 +363,41 @@ element_predictions <- map_dfc(community_elements, function(mat) {
       arrange(-positive_support)
 ```
 
+### Positive associated functions at element level
+
 ```{r hmsc_origin_element_significant, warning=FALSE, comments="", message=FALSE}
 # Positively associated
+
+unique_funct_db<- GIFT_db[c(2,4,5,6)] %>% 
+  distinct(Code_element, .keep_all = TRUE)
+
+
 element_predictions %>%
   filter(mean >0) %>%
   arrange(-positive_support) %>%
   filter(positive_support>=0.9) %>%
+  left_join(unique_funct_db, by = join_by(trait == Code_element))%>%
+  arrange(Domain,Function)%>%
   tt()
 
 element_predictions %>%
   filter(mean <0) %>%
   arrange(-negative_support) %>%
   filter(negative_support>=0.9) %>%
+  left_join(unique_funct_db, by = join_by(trait == Code_element))%>%
+  arrange(Domain,Function)%>%
+  tt()
+```
+
+### Negatively associated functions at element level
+
+```{r hmsc_origin_element_significant_neg, warning=FALSE, comments="", message=FALSE}
+element_predictions %>%
+  filter(mean <0) %>%
+  arrange(-negative_support) %>%
+  filter(negative_support>=0.9) %>%
+  left_join(unique_funct_db, by = join_by(trait == Code_element))%>%
+  arrange(Domain,Function)%>%
   tt()
 ```
 
@@ -321,6 +421,23 @@ bind_rows(positive,negative) %>%
   left_join(GIFT_db,by=join_by(trait==Code_element)) %>%
   mutate(trait=factor(trait,levels=c(rev(positive$trait),rev(negative$trait)))) %>%
   ggplot(aes(x=mean, y=fct_rev(trait), xmin=p1, xmax=p9, color=Function)) +
+      geom_point() +
+      geom_errorbar() +
+      xlim(c(-0.04,0.04)) +
+      geom_vline(xintercept=0) +
+      scale_color_manual(values = c("#debc14","#440526","#dc7c17","#172742","#debc14","#440526","#dc7c17","#172742","#357379","#6c7e2c","#d8dc69","#774d35","#db717d")) +
+      theme_minimal() +
+      labs(x="Regression coefficient",y="Functional trait")
+```
+
+```{r}
+table <- bind_rows(positive,negative) %>%
+  left_join(unique_funct_db,by=join_by(trait==Code_element)) %>%
+  mutate(trait=factor(trait,levels=c(rev(positive$trait),rev(negative$trait)))) 
+
+table %>%
+  mutate(Element=factor(Element,levels=c(table$Element))) %>%
+  ggplot(aes(x=mean, y=fct_rev(Element), xmin=p1, xmax=p9, color=Function)) +
       geom_point() +
       geom_errorbar() +
       xlim(c(-0.04,0.04)) +
