@@ -24,7 +24,7 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-This webbook contains all the code used for data analysis in study on the recovery of metagenome‑assembled genomes and derived microbial communities from tame and feral cat faecal samples collected in six countries.
+This webbook contains all the code used for data analysis in study on the recovery of metagenome‑assembled genomes and derived microbial communities from domestic and feral cat faecal samples collected in six countries.
 
 ## Prepare the R environment
 

@@ -30,15 +30,15 @@ beta_q1f <- genome_counts_filt %>%
   hillpair(., q = 1, dist = dist)
 ```
 
-### Permanova
+## Permanova
 
 ```{r permanova, comment="", message=FALSE, warning=FALSE}
 #Richness
 betadisper(beta_q0n$C, sample_metadata$Origin) %>% permutest(., pairwise = TRUE) 
 adonis2(beta_q0n$C ~ Origin, 
-        data = sample_metadata %>% arrange(match(sample,labels(beta_q1n$C))), 
+        data = sample_metadata %>% arrange(match(sample,labels(beta_q0n$C))), 
         permutations = 999, 
-        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$C))) %>% pull(Location)) %>%
+        strata = sample_metadata %>% arrange(match(sample,labels(beta_q0n$C))) %>% pull(Location)) %>%
         broom::tidy() %>%
         tt()
 
@@ -54,23 +54,23 @@ adonis2(beta_q1n$C ~ Origin,
 #Phylogenetic diversity
 betadisper(beta_q1p$C, sample_metadata$Origin) %>% permutest(., pairwise = TRUE) 
 adonis2(beta_q1p$C ~ Origin, 
-        data = sample_metadata %>% arrange(match(sample,labels(beta_q1n$C))), 
+        data = sample_metadata %>% arrange(match(sample,labels(beta_q1p$C))), 
         permutations = 999, 
-        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$C))) %>% pull(Location)) %>%
+        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1p$C))) %>% pull(Location)) %>%
         broom::tidy() %>%
         tt()
 
 #Functional diversity
 betadisper(beta_q1f$C, sample_metadata$Origin) %>% permutest(., pairwise = TRUE) 
 adonis2(beta_q1f$C ~ Origin, 
-        data = sample_metadata %>% arrange(match(sample,labels(beta_q1n$C))), 
+        data = sample_metadata %>% arrange(match(sample,labels(beta_q1f$C))), 
         permutations = 999, 
-        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$C))) %>% pull(Location)) %>%
+        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1f$C))) %>% pull(Location)) %>%
         broom::tidy() %>%
         tt()
 ```
 
-### Richness diversity plot
+## Richness diversity plot
 
 ```{r beta_div_nmds_neutral_plot, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
 beta_q0n$S %>%
@@ -108,7 +108,7 @@ beta_q0n$S %>%
 ```
 
 
-### Neutral diversity plot
+## Neutral diversity plot
 
 ```{r beta_div_nmds_phylo_plot, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
 beta_q1n$S %>%

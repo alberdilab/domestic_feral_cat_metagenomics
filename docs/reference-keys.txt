@@ -30,7 +30,7 @@ taxonomy-boxplot
 family
 genus
 alpha-diversity
-mixed-models-location
+mixed-models
 beta-diversity
 permanova
 richness-diversity-plot
