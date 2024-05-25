@@ -25,12 +25,12 @@ functional-ordination
 community-composition
 taxonomy-overview
 stacked-barplot
-phylum-relative-abundances
 phylum-percentages-by-behaviour
 taxonomy-boxplot
 family
 genus
 alpha-diversity
+mixed-models-location
 beta-diversity
 permanova
 richness-diversity-plot

@@ -162,4 +162,33 @@ alpha_div %>%
       )
 ```
 
+## Mixed models (location)
 
+```{r model_rich, comment="", message=FALSE, warning=FALSE, eval=FALSE}
+alpha_div_meta <- alpha_div %>%
+  left_join(sample_metadata, by = join_by(sample == sample))
+Modelq0_Loca <- glm.nb(richness ~ Location, data = alpha_div_meta,trace=TRUE)#USE THIS!
+anova(Modelq0_Loca)
+r.squaredGLMM(Modelq0_Loca)
+emmeans(Modelq0_Loca, pairwise ~ Location)
+```
+
+```{r model_neutral, comment="", message=FALSE, warning=FALSE, eval=FALSE}
+Modelq1_Loca <- lm(formula = neutral ~ Location, data = alpha_div_meta) 
+anova(Modelq1_Loca)
+r.squaredGLMM(Modelq1_Loca)
+emmeans(Modelq1_Loca, pairwise ~ Location)
+```
+```{r model_phylo, comment="", message=FALSE, warning=FALSE, eval=FALSE}
+Modelq1p_Loca <- lm(formula = phylogenetic ~ Location, data = alpha_div_meta) 
+anova(Modelq1p_Loca)
+r.squaredGLMM(Modelq1p_Loca)
+emmeans(Modelq1p_Loca, pairwise ~ Location)
+```
+
+```{r model_funct, comment="", message=FALSE, warning=FALSE, eval=FALSE}
+Modelq1F_Loca <- lm(formula = functional ~ Location, data = alpha_div_meta) 
+anova(Modelq1F_Loca)
+r.squaredGLMM(Modelq1F_Loca)
+emmeans(Modelq1F_Loca, pairwise ~ Location)
+```

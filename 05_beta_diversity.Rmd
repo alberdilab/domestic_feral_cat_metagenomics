@@ -8,25 +8,25 @@ load("data/data.Rdata")
 beta_q0n <- genome_counts_filt %>%
   column_to_rownames(., "genome") %>%
   filter(rowSums(. != 0, na.rm = TRUE) > 0) %>%
-  select_if(~!all(. == 0)) %>%
+  dplyr::select_if(~!all(. == 0)) %>%
   hillpair(., q = 0)
 
 beta_q1n <- genome_counts_filt %>%
   column_to_rownames(., "genome") %>%
   filter(rowSums(. != 0, na.rm = TRUE) > 0) %>%
-  select_if(~!all(. == 0)) %>%
+  dplyr::select_if(~!all(. == 0)) %>%
   hillpair(., q = 1)
 
 beta_q1p <- genome_counts_filt %>%
   column_to_rownames(., "genome") %>%
   filter(rowSums(. != 0, na.rm = TRUE) > 0) %>%
-  select_if(~!all(. == 0)) %>%
+  dplyr::select_if(~!all(. == 0)) %>%
   hillpair(., q = 1, tree = genome_tree)
 
 beta_q1f <- genome_counts_filt %>%
   column_to_rownames(., "genome") %>%
   filter(rowSums(. != 0, na.rm = TRUE) > 0) %>%
-  select_if(~!all(. == 0)) %>%
+  dplyr::select_if(~!all(. == 0)) %>%
   hillpair(., q = 1, dist = dist)
 ```
 

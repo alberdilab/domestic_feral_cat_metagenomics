@@ -44,17 +44,17 @@ phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI
     arrange(match(genome, varpart_tree$tip.label)) %>%
     mutate(phylum = factor(phylum, levels = unique(phylum))) %>%
     column_to_rownames(var = "genome") %>%
-    select(phylum)
+    dplyr::select(phylum)
 
 colors_alphabetic <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
     mutate(phylum=str_remove_all(phylum, "p__"))%>%
   right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
     filter(genome %in% varpart_tree$tip.label) %>%
     arrange(match(genome, varpart_tree$tip.label)) %>%
-     select(phylum, colors) %>%
+     dplyr::select(phylum, colors) %>%
     unique() %>%
     arrange(phylum) %>%
-    select(colors) %>%
+    dplyr::select(colors) %>%
     pull()
 
 # Basal ggtree
@@ -119,7 +119,7 @@ phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI
     arrange(match(genome, postestimates_tree$tip.label)) %>%
     mutate(phylum = factor(phylum, levels = unique(phylum))) %>%
     column_to_rownames(var = "genome") %>%
-    select(phylum)
+    dplyr::select(phylum)
 
 
 colors_alphabetic <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
@@ -127,10 +127,10 @@ colors_alphabetic <- read_tsv("https://raw.githubusercontent.com/earthhologenome
     right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
     filter(genome %in% postestimates_tree$tip.label) %>%
     arrange(match(genome, postestimates_tree$tip.label)) %>%
-     select(phylum, colors) %>%
+     dplyr::select(phylum, colors) %>%
     unique() %>%
     arrange(phylum) %>%
-    select(colors) %>%
+    dplyr::select(colors) %>%
     pull()
 
 # Basal ggtree
@@ -170,7 +170,7 @@ getPostEstimate(hM=m, parName="Beta")$support %>%
     filter(variable=="originTame", trend=="Positive") %>%
     arrange(-value) %>%
     left_join(genome_metadata,by=join_by(genome==genome)) %>%
-    select(genome,phylum,class,order,family,species,value) %>%
+    dplyr::select(genome,phylum,class,order,family,species,value) %>%
     arrange(phylum, class, family)%>%
     tt()
 ```
@@ -189,7 +189,7 @@ getPostEstimate(hM=m, parName="Beta")$support %>%
     filter(variable=="originTame", trend=="Negative") %>%
     arrange(value) %>%
     left_join(genome_metadata,by=join_by(genome==genome)) %>%
-    select(genome,phylum,class,order,family,species,value) %>%
+    dplyr::select(genome,phylum,class,order,family,species,value) %>%
     arrange(phylum,class,family)%>%
     tt()
 ```
@@ -201,24 +201,24 @@ estimate <- getPostEstimate(hM=m, parName="Beta")$mean %>%
     mutate(variable=m$covNames) %>%
     filter(variable=="originTame") %>%
     pivot_longer(!variable, names_to = "genome", values_to = "mean") %>%
-    select(genome,mean)
+    dplyr::select(genome,mean)
 
 support <- getPostEstimate(hM=m, parName="Beta")$support %>%
     as.data.frame() %>%
     mutate(variable=m$covNames) %>%
     filter(variable=="originTame") %>%
     pivot_longer(!variable, names_to = "genome", values_to = "support") %>%
-    select(genome,support)
+    dplyr::select(genome,support)
 
 phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
-    right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
-    filter(genome %in% estimate$genome) %>%
-    arrange(match(genome, estimate$genome)) %>%
-     select(phylum, colors) %>%
-    unique() %>%
-    arrange(phylum) %>%
-    select(colors) %>%
-    pull()
+  right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
+  filter(genome %in% estimate$genome) %>%
+  arrange(match(genome, estimate$genome)) %>%
+  dplyr::select(phylum, colors) %>%
+  unique() %>%
+  arrange(phylum) %>%
+  dplyr::select(colors) %>%
+  pull()
 
 inner_join(estimate,support,by=join_by(genome==genome)) %>%
     mutate(significance=ifelse(support >= 0.9 | support <= 0.1,1,0)) %>%
@@ -325,7 +325,7 @@ community_elements <- pred %>%
   group_split(row_id) %>%
   as.list() %>%
   lapply(., FUN = function(x){x %>%
-    select(-row_id) %>%
+    dplyr::select(-row_id) %>%
     column_to_rownames(var = "origin") %>%
     as.data.frame() %>%
     exp() %>%
@@ -348,7 +348,7 @@ element_predictions <- map_dfc(community_elements, function(mat) {
         as.data.frame() %>%
         rowwise() %>%
         mutate(slope = calculate_slope(c_across(everything()))) %>%
-        select(slope) }) %>%
+        dplyr::select(slope) }) %>%
       t() %>%
       as.data.frame() %>%
       set_names(colnames(community_elements[[1]])[-1]) %>%
@@ -407,14 +407,14 @@ positive <- element_predictions %>%
   filter(mean >0) %>%
   arrange(mean) %>%
   filter(positive_support>=0.9) %>%
-  select(-negative_support) %>%
+  dplyr::select(-negative_support) %>%
   rename(support=positive_support)
 
 negative <- element_predictions %>%
   filter(mean <0) %>%
   arrange(mean) %>%
   filter(negative_support>=0.9) %>%
-  select(-positive_support) %>%
+  dplyr::select(-positive_support) %>%
   rename(support=negative_support)
 
 bind_rows(positive,negative) %>%
@@ -430,7 +430,7 @@ bind_rows(positive,negative) %>%
       labs(x="Regression coefficient",y="Functional trait")
 ```
 
-```{r}
+```{r hmsc_origin_significant_plot1, warning=FALSE, comments="", message=FALSE}
 table <- bind_rows(positive,negative) %>%
   left_join(unique_funct_db,by=join_by(trait==Code_element)) %>%
   mutate(trait=factor(trait,levels=c(rev(positive$trait),rev(negative$trait)))) 
@@ -463,7 +463,7 @@ community_functions <- pred %>%
   group_split(row_id) %>%
   as.list() %>%
   lapply(., FUN = function(x){x %>%
-    select(-row_id) %>%
+    dplyr::select(-row_id) %>%
     column_to_rownames(var = "origin") %>%
     as.data.frame() %>%
     exp() %>%
@@ -489,7 +489,7 @@ function_predictions <- map_dfc(community_functions, function(mat) {
         as.data.frame() %>%
         rowwise() %>%
         mutate(slope = calculate_slope(c_across(everything()))) %>%
-        select(slope) }) %>%
+        dplyr::select(slope) }) %>%
       t() %>%
       as.data.frame() %>%
       set_names(colnames(community_functions[[1]])[-1]) %>%
@@ -523,14 +523,14 @@ positive <- function_predictions %>%
   filter(mean >0) %>%
   arrange(mean) %>%
   filter(positive_support>=0.9) %>%
-  select(-negative_support) %>%
+  dplyr::select(-negative_support) %>%
   rename(support=positive_support)
 
 negative <- function_predictions %>%
   filter(mean <0) %>%
   arrange(mean) %>%
   filter(negative_support>=0.9) %>%
-  select(-positive_support) %>%
+  dplyr::select(-positive_support) %>%
   rename(support=negative_support)
 
 bind_rows(positive,negative) %>%

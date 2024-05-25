@@ -9,7 +9,7 @@ load("data/data.Rdata")
 ```{r hmsc_input, warning=FALSE, comments="", message=FALSE}
 # Random effects data (study design)
 StudyDesign <- sample_metadata %>%
-                    select(sample,Location) %>% 
+                    dplyr::select(sample,Location) %>% 
                     rename(location=Location) %>% 
                     column_to_rownames("sample") %>% 
                     mutate(location = factor(location))
@@ -21,7 +21,7 @@ YData <- read_counts %>%
                     mutate(across(where(is.numeric), ~  log(.) )) %>% #log-transform
                     arrange(genome) %>%
                     column_to_rownames("genome") %>% 
-                    select(all_of(row.names(StudyDesign))) %>%  #filter only faecal samples
+                    dplyr::select(all_of(row.names(StudyDesign))) %>%  #filter only faecal samples
                     as.data.frame() %>%
                     t() # transpose
 
@@ -29,14 +29,14 @@ YData <- read_counts %>%
 XData <- sample_metadata %>% 
                     column_to_rownames("sample") %>% 
                     mutate(logseqdepth=read_counts %>% #total log-sequencing depth
-                        select(all_of(row.names(StudyDesign))) %>% 
+                        dplyr::select(all_of(row.names(StudyDesign))) %>% 
                         colSums() %>% 
                         log()
                     ) %>% 
                     rename(origin=Origin, sex=F.M) %>% 
                     mutate(origin = factor(origin)) %>%
                     mutate(sex = factor(sex)) %>% 
-                    select(origin, sex, logseqdepth)
+                    dplyr::select(origin, sex, logseqdepth)
 
 # Genome phylogeny
 PData <- genome_tree

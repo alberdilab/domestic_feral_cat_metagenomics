@@ -16,7 +16,7 @@ sample_metadata <- read_csv("data/sample_metadata.csv") %>%
 ```{r load_read_counts, warning=FALSE, comments="", message=FALSE}
 read_counts <- read_tsv("data/read_counts.tsv") %>%
     rename(genome=1) %>%
-    select(c("genome",sample_metadata$sample))
+    dplyr::select(c("genome",sample_metadata$sample))
 ```
 
 ### Genome coverage
@@ -24,7 +24,7 @@ read_counts <- read_tsv("data/read_counts.tsv") %>%
 ```{r load_genome_hits, warning=FALSE, comments="", message=FALSE}
 genome_coverage <- read_tsv("data/genome_coverage.tsv") %>%
     rename(genome=1) %>%
-    select(c("genome",sample_metadata$sample))
+    dplyr::select(c("genome",sample_metadata$sample))
 ```
 
 ### Genome metadata
@@ -84,7 +84,7 @@ genome_counts_filt <- read_counts_filt %>%
 
 ### Distill annotations into GIFTs 
 
-```{r distill_annotations, warning=FALSE, comments="", message=FALSE, eval=FALSE}
+```{r distill_annotations, warning=FALSE, comments="", message=FALSE}
 genome_gifts <- distill(genome_annotations,GIFT_db,genomecol=2,annotcol=c(9,10,19), verbosity=F)
 ```
 
@@ -97,7 +97,7 @@ phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI
     mutate(phylum=str_remove_all(phylum, "p__")) %>%
     right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
     arrange(match(genome, genome_tree$tip.label)) %>%
-    select(phylum, colors) %>% 
+    dplyr::select(phylum, colors) %>% 
     unique() %>%
     arrange(phylum) %>%
     pull(colors, name=phylum)
@@ -113,7 +113,7 @@ phylo_genome <- genome_counts %>%
   column_to_rownames("genome") %>% 
   otu_table(., taxa_are_rows = TRUE)
 phylo_taxonomy <- genome_metadata %>%
-  select(c(1,5:10))%>%
+  dplyr::select(c(1,5:10))%>%
   column_to_rownames("genome") %>% 
   as.matrix() %>% 
   tax_table() #convert to phyloseq tax_table object

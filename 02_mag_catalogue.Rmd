@@ -12,7 +12,7 @@ phylum_heatmap <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EH
     mutate(phylum=str_remove_all(phylum, "p__")) %>%
     right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
     arrange(match(genome, genome_tree$tip.label)) %>%
-    select(genome,phylum) %>%
+    dplyr::select(genome,phylum) %>%
     mutate(phylum = factor(phylum, levels = unique(phylum))) %>%
     column_to_rownames(var = "genome")
 
@@ -81,7 +81,7 @@ tibble(Completeness=
 
 #Generate quality biplot
 genome_biplot <- genome_metadata %>%
-  select(c(genome,phylum,completeness,contamination,length)) %>%
+  dplyr::select(c(genome,phylum,completeness,contamination,length)) %>%
   arrange(match(genome, rev(genome_tree$tip.label))) %>% #sort MAGs according to phylogenetic tree
   ggplot(aes(x=completeness,y=contamination,size=length,color=phylum)) +
               geom_point(alpha=0.7) +
@@ -198,7 +198,7 @@ function_ordination <- tSNE_function$Y %>%
                 mutate(genome=rownames(function_table)) %>%
                 inner_join(genome_metadata, by="genome") %>%
                 rename(tSNE1="V1", tSNE2="V2") %>%
-                select(genome,phylum,tSNE1,tSNE2, length) %>%
+                dplyr::select(genome,phylum,tSNE1,tSNE2, length) %>%
                 ggplot(aes(x = tSNE1, y = tSNE2, color = phylum, size=length))+
                             geom_point(shape=16, alpha=0.7) +
                             scale_color_manual(values=phylum_colors) +
