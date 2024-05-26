@@ -156,9 +156,11 @@ postestimates_tree +
         vexpand(.25, 1) # expand top 
 ```
 
-### Positively associated genomes
+### Origin
 
-```{r}
+#### Positively associated genomes with domestic cats
+
+```{r hmsc_positive_origin, warning=FALSE, comments="", message=FALSE}
 getPostEstimate(hM=m, parName="Beta")$support %>%
     as.data.frame() %>%
     mutate(variable=m$covNames) %>%
@@ -175,9 +177,9 @@ getPostEstimate(hM=m, parName="Beta")$support %>%
     tt()
 ```
 
-### Negatively associated genomes
+#### Positively associated genomes feral cats
 
-```{r}
+```{r hmsc_negative_origin, warning=FALSE, comments="", message=FALSE}
 getPostEstimate(hM=m, parName="Beta")$support %>%
     as.data.frame() %>%
     mutate(variable=m$covNames) %>%
@@ -194,8 +196,8 @@ getPostEstimate(hM=m, parName="Beta")$support %>%
     tt()
 ```
 
-### Estimate - support plot
-```{r}
+#### Estimate - support plot
+```{r hmsc_support_plot_origin, warning=FALSE, comments="", message=FALSE}
 estimate <- getPostEstimate(hM=m, parName="Beta")$mean %>%
     as.data.frame() %>%
     mutate(variable=m$covNames) %>%
@@ -211,6 +213,7 @@ support <- getPostEstimate(hM=m, parName="Beta")$support %>%
     dplyr::select(genome,support)
 
 phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
+    mutate(phylum=str_remove_all(phylum, "p__")) %>%
   right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
   filter(genome %in% estimate$genome) %>%
   arrange(match(genome, estimate$genome)) %>%
@@ -236,7 +239,7 @@ inner_join(estimate,support,by=join_by(genome==genome)) %>%
 ```
 
 
-## Correlations
+#### Correlations
 
 ```{r hmsc_correlations, warning=FALSE, comments="", message=FALSE}
 #Compute the residual correlation matrix
@@ -288,7 +291,7 @@ grid.arrange(grobs = list(matrix,vtree),
                                    c(2,1,1,1,1,1,1,1,1,1,1,1)))
 ```
 
-## Predict responses
+#### Predict responses (origin)
 
 ```{r hmsc_predictions, warning=FALSE, comments="", message=FALSE}
 
@@ -363,7 +366,7 @@ element_predictions <- map_dfc(community_elements, function(mat) {
       arrange(-positive_support)
 ```
 
-### Positive associated functions at element level
+##### Positive associated functions at element level
 
 ```{r hmsc_origin_element_significant, warning=FALSE, comments="", message=FALSE}
 # Positively associated
@@ -389,7 +392,7 @@ element_predictions %>%
   tt()
 ```
 
-### Negatively associated functions at element level
+##### Negatively associated functions at element level
 
 ```{r hmsc_origin_element_significant_neg, warning=FALSE, comments="", message=FALSE}
 element_predictions %>%
@@ -542,6 +545,332 @@ bind_rows(positive,negative) %>%
       xlim(c(-0.02,0.02)) +
       geom_vline(xintercept=0) +
       scale_color_manual(values = c("#debc14","#440526","#dc7c17","#172742","#debc14","#440526","#dc7c17","#172742","#357379","#6c7e2c","#d8dc69","#774d35","#db717d")) +
+      theme_minimal() +
+      labs(x="Regression coefficient",y="Functional trait")
+```
+
+### Sex
+
+#### Negatively associated genomes with male cats
+
+```{r hmsc_positive_sex, warning=FALSE, comments="", message=FALSE}
+# Compute variance partitioning
+varpart=computeVariancePartitioning(m)
+
+varpart$vals %>%
+   as.data.frame() %>%
+   rownames_to_column(var="variable") %>%
+   pivot_longer(!variable, names_to = "genome", values_to = "value") %>%
+   mutate(variable=factor(variable, levels=rev(c("origin","sex","logseqdepth","Random: location")))) %>%
+   group_by(variable) %>%
+   summarise(mean=mean(value)*100,sd=sd(value)*100) %>%
+   tt()
+
+# Select desired support threshold
+support=0.9
+negsupport=1-support
+
+# Basal tree
+postestimates_tree <- genome_tree
+# Posterior estimate table
+post_beta <- getPostEstimate(hM=m, parName="Beta")$support %>%
+    as.data.frame() %>%
+    mutate(variable=m$covNames) %>%
+    pivot_longer(!variable, names_to = "genome", values_to = "value") %>%
+    mutate(genome=factor(genome, levels=rev(postestimates_tree$tip.label))) %>%
+    mutate(value = case_when(
+          value >= support ~ "Positive",
+          value <= negsupport ~ "Negative",
+          TRUE ~ "Neutral")) %>%
+    mutate(value=factor(value, levels=c("Positive","Neutral","Negative"))) %>%
+    pivot_wider(names_from = variable, values_from = value) %>%
+    column_to_rownames(var="genome")
+
+getPostEstimate(hM=m, parName="Beta")$support %>%
+    as.data.frame() %>%
+    mutate(variable=m$covNames) %>%
+    pivot_longer(!variable, names_to = "genome", values_to = "value") %>%
+    mutate(trend = case_when(
+          value >= support ~ "Positive",
+          value <= negsupport ~ "Negative",
+          TRUE ~ "Neutral")) %>%
+    filter(variable=="sexMale", trend=="Negative") %>%
+    arrange(-value) %>%
+    left_join(genome_metadata,by=join_by(genome==genome)) %>%
+    dplyr::select(genome,phylum,class,order,family,species,value) %>%
+    arrange(phylum, class, family)%>%
+    tt()
+```
+
+#### Estimate - support plot
+```{r hmsc_negative_sex, warning=FALSE, comments="", message=FALSE}
+estimate <- getPostEstimate(hM=m, parName="Beta")$mean %>%
+    as.data.frame() %>%
+    mutate(variable=m$covNames) %>%
+    filter(variable=="sexMale") %>%
+    pivot_longer(!variable, names_to = "genome", values_to = "mean") %>%
+    dplyr::select(genome,mean)
+
+support <- getPostEstimate(hM=m, parName="Beta")$support %>%
+    as.data.frame() %>%
+    mutate(variable=m$covNames) %>%
+    filter(variable=="sexMale") %>%
+    pivot_longer(!variable, names_to = "genome", values_to = "support") %>%
+    dplyr::select(genome,support)
+
+phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
+    mutate(phylum=str_remove_all(phylum, "p__")) %>%
+  right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
+  filter(genome %in% estimate$genome) %>%
+  arrange(match(genome, estimate$genome)) %>%
+  dplyr::select(phylum, colors) %>%
+  unique() %>%
+  arrange(phylum) %>%
+  dplyr::select(colors) %>%
+  pull()
+
+inner_join(estimate,support,by=join_by(genome==genome)) %>%
+    mutate(significance=ifelse(support >= 0.9 | support <= 0.1,1,0)) %>%
+    mutate(support=ifelse(mean<0,1-support,support)) %>%
+    left_join(genome_metadata, by = join_by(genome == genome)) %>%
+    mutate(phylum = ifelse(support > 0.9, phylum, NA)) %>%
+    ggplot(aes(x=mean,y=support,color=phylum))+
+      geom_point(alpha=0.7, shape=16, size=3)+
+      scale_color_manual(values = phylum_colors) +
+      geom_vline(xintercept = 0) +
+      xlim(c(-0.4,0.4)) +
+      labs(x = "Beta regression coefficient", y = "Posterior probability") +
+      theme_minimal()+
+       theme(legend.position = "none")
+```
+
+
+#### Predict responses
+
+```{r hmsc_predictions_sex, warning=FALSE, comments="", message=FALSE}
+
+# Select modelchain of interest
+load("hmsc/fit_model1_250_10.Rdata")
+
+gradient = c("Male","Female","Unknown")
+gradientlength = length(gradient)
+
+#Treatment-specific gradient predictions
+pred <- constructGradient(m, 
+                      focalVariable = "sex", 
+                      non.focalVariables = list(logseqdepth=list(1),location=list(1))) %>%
+            predict(m, Gradient = ., expected = TRUE) %>%
+            do.call(rbind,.) %>%
+            as.data.frame() %>%
+            mutate(sex=rep(gradient,1000)) %>%
+            pivot_longer(!sex,names_to = "genome", values_to = "value")
+```
+
+
+#### Element level
+
+```{r hmsc_sex_element, warning=FALSE, comments="", message=FALSE}
+elements_table <- genome_gifts %>%
+    to.elements(., GIFT_db) %>%
+    as.data.frame()
+
+community_elements <- pred %>%
+  group_by(sex, genome) %>%
+  mutate(row_id = row_number()) %>%
+  pivot_wider(names_from = genome, values_from = value) %>%
+  ungroup() %>%
+  group_split(row_id) %>%
+  as.list() %>%
+  lapply(., FUN = function(x){x %>%
+    dplyr::select(-row_id) %>%
+    column_to_rownames(var = "sex") %>%
+    as.data.frame() %>%
+    exp() %>%
+    t() %>%
+    tss() %>%
+    to.community(elements_table,.,GIFT_db) %>% 
+    as.data.frame() %>%
+    rownames_to_column(var="sex")
+   })
+
+calculate_slope <- function(x) {
+  lm_fit <- lm(unlist(x) ~ seq_along(unlist(x)))
+  coef(lm_fit)[2]
+}
+
+element_predictions <- map_dfc(community_elements, function(mat) {
+      mat %>%
+        column_to_rownames(var = "sex") %>%
+        t() %>%
+        as.data.frame() %>%
+        rowwise() %>%
+        mutate(slope = calculate_slope(c_across(everything()))) %>%
+        dplyr::select(slope) }) %>%
+      t() %>%
+      as.data.frame() %>%
+      set_names(colnames(community_elements[[1]])[-1]) %>%
+      rownames_to_column(var="iteration") %>%
+      pivot_longer(!iteration, names_to="trait",values_to="value") %>%
+      group_by(trait) %>%
+      summarise(mean=mean(value),
+        p1 = quantile(value, probs = 0.1),
+        p9 = quantile(value, probs = 0.9),
+        positive_support = sum(value > 0)/1000,
+        negative_support = sum(value < 0)/1000) %>%
+      arrange(-positive_support)
+```
+
+##### Positive associated functions at element level
+
+```{r hmsc_sex_element_significant, warning=FALSE, comments="", message=FALSE}
+# Positively associated
+
+unique_funct_db<- GIFT_db[c(2,4,5,6)] %>% 
+  distinct(Code_element, .keep_all = TRUE)
+
+
+element_predictions %>%
+  filter(mean >0) %>%
+  arrange(-positive_support) %>%
+  filter(positive_support>=0.9) %>%
+  left_join(unique_funct_db, by = join_by(trait == Code_element))%>%
+  arrange(Domain,Function)
+```
+
+##### Negatively associated functions at element level
+
+```{r hmsc_sex_element_significant_neg, warning=FALSE, comments="", message=FALSE}
+element_predictions %>%
+  filter(mean <0) %>%
+  arrange(-negative_support) %>%
+  filter(negative_support>=0.9) %>%
+  left_join(unique_funct_db, by = join_by(trait == Code_element))%>%
+  arrange(Domain,Function)
+```
+
+```{r hmsc_sex_significant_plot, warning=FALSE, comments="", message=FALSE}
+
+positive <- element_predictions %>%
+  filter(mean >0) %>%
+  arrange(mean) %>%
+  filter(positive_support>=0.9) %>%
+  dplyr::select(-negative_support) %>%
+  rename(support=positive_support)
+
+negative <- element_predictions %>%
+  filter(mean <0) %>%
+  arrange(mean) %>%
+  filter(negative_support>=0.9) %>%
+  dplyr::select(-positive_support) %>%
+  rename(support=negative_support)
+
+bind_rows(positive,negative) %>%
+  left_join(GIFT_db,by=join_by(trait==Code_element)) %>%
+  mutate(trait=factor(trait,levels=c(rev(positive$trait),rev(negative$trait)))) %>%
+  ggplot(aes(x=mean, y=fct_rev(trait), xmin=p1, xmax=p9, color=Function)) +
+      geom_point() +
+      geom_errorbar() +
+#      xlim(c(-0.04,0.04)) +
+      geom_vline(xintercept=0) +
+#      scale_color_manual(values = c("#debc14","#440526","#dc7c17","#172742","#debc14","#440526","#dc7c17","#172742","#357379","#6c7e2c","#d8dc69","#774d35","#db717d")) +
+      theme_minimal() +
+      labs(x="Regression coefficient",y="Functional trait")
+```
+
+#### Function level
+
+```{r hmsc_sex_function_predictions, warning=FALSE, comments="", message=FALSE}
+functions_table <- elements_table %>%
+    to.functions(., GIFT_db) %>%
+    as.data.frame()
+
+community_functions <- pred %>%
+  group_by(sex, genome) %>%
+  mutate(row_id = row_number()) %>%
+  pivot_wider(names_from = genome, values_from = value) %>%
+  ungroup() %>%
+  group_split(row_id) %>%
+  as.list() %>%
+  lapply(., FUN = function(x){x %>%
+    dplyr::select(-row_id) %>%
+    column_to_rownames(var = "sex") %>%
+    as.data.frame() %>%
+    exp() %>%
+    t() %>%
+    tss() %>%
+    to.community(functions_table,.,GIFT_db) %>% 
+    as.data.frame() %>%
+    rownames_to_column(var="sex")
+   })
+```
+
+```{r hmsc_sex_function_predictions_model, warning=FALSE, comments="", message=FALSE}
+#max-min option
+calculate_slope <- function(x) {
+  lm_fit <- lm(unlist(x) ~ seq_along(unlist(x)))
+  coef(lm_fit)[2]
+}
+
+function_predictions <- map_dfc(community_functions, function(mat) {
+      mat %>%
+        column_to_rownames(var = "sex") %>%
+        t() %>%
+        as.data.frame() %>%
+        rowwise() %>%
+        mutate(slope = calculate_slope(c_across(everything()))) %>%
+        dplyr::select(slope) }) %>%
+      t() %>%
+      as.data.frame() %>%
+      set_names(colnames(community_functions[[1]])[-1]) %>%
+      rownames_to_column(var="iteration") %>%
+      pivot_longer(!iteration, names_to="trait",values_to="value") %>%
+      group_by(trait) %>%
+      summarise(mean=mean(value),
+        p1 = quantile(value, probs = 0.1),
+        p9 = quantile(value, probs = 0.9),
+        positive_support = sum(value > 0)/1000,
+        negative_support = sum(value < 0)/1000) %>%
+      arrange(-positive_support)
+
+# Positively associated
+function_predictions %>%
+  filter(mean >0) %>%
+  arrange(-positive_support) %>%
+  tt()
+
+# Negatively associated
+function_predictions %>%
+  filter(mean <0) %>%
+  arrange(-negative_support) %>%
+  tt()
+```
+
+
+```{r hmsc_sex_function_significant_plot, warning=FALSE, comments="", message=FALSE}
+
+positive <- function_predictions %>%
+  filter(mean >0) %>%
+  arrange(mean) %>%
+  filter(positive_support>=0.9) %>%
+  dplyr::select(-negative_support) %>%
+  rename(support=positive_support)
+
+negative <- function_predictions %>%
+  filter(mean <0) %>%
+  arrange(mean) %>%
+  filter(negative_support>=0.9) %>%
+  dplyr::select(-positive_support) %>%
+  rename(support=negative_support)
+
+bind_rows(positive,negative) %>%
+  left_join(GIFT_db,by=join_by(trait==Code_function)) %>%
+  mutate(trait=factor(trait,levels=c(rev(positive$trait),rev(negative$trait)))) %>%
+  ggplot(aes(x=mean, y=fct_rev(trait), xmin=p1, xmax=p9, color=Function)) +
+      geom_point() +
+      geom_errorbar() +
+#      xlim(c(-0.02,0.02)) +
+      geom_vline(xintercept=0) +
+      scale_color_manual(values = c("#debc14","#440526","#dc7c17","#172742","#357379","#6c7e2c","#d8dc69","#774d35","#db717d")) +
       theme_minimal() +
       labs(x="Regression coefficient",y="Functional trait")
 ```
