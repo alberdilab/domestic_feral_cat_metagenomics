@@ -1,0 +1,2297 @@
+---
+title: "AlberdiLab | "
+subtitle: "Domestic-feral cat metagenomics"
+author:
+  - Ostaizka Aizpurua^[University of Copenhagen, ostaizka.aizpurua@sund.ku.dk]
+  - Antton Alberdi^[University of Copenhagen, antton.alberdi@sund.ku.dk]
+date: "`r Sys.Date()`"
+site: bookdown::bookdown_site
+documentclass: book
+bibliography: [book.bib, packages.bib]
+url: https://alberdilab.github.io/domestic_feral_cat_metagenomics
+description: |
+  Data analysis code for the study on the comparison between domestic and feral cats.
+link-citations: yes
+github-repo: alberdilab/domestic_feral_cat_metagenomics
+---
+
+```{r knitr_opts, echo=FALSE}
+knitr::opts_chunk$set(
+    class.source = "script-source",
+    class.output = "script-output",
+    comment = NA)
+```
+
+# Introduction
+
+This webbook contains all the code used for data analysis in study on the recovery of metagenome‑assembled genomes and derived microbial communities from domestic and feral cat faecal samples collected in six countries.
+
+## Prepare the R environment
+
+### Environment
+
+To reproduce all the analyses locally, clone this repository in your computer using:
+
+```
+RStudio > New Project > Version Control > Git
+```
+
+And indicating the following git repository:
+
+> https://github.com/alberdilab/domestic_feral_cat_metagenomics.git
+
+Once the R project has been created, follow the instructions and code chunks shown in this webbook.
+
+### Libraries
+
+The following R packages are required for the data analysis.
+
+```{r load_libraries, warning=FALSE, comments="", message=FALSE}
+# Base
+library(R.utils)
+library(knitr)
+library(tidyverse)
+library(devtools)
+library(tinytable)
+library(broom)
+library(broom.mixed)
+library(rmarkdown)
+
+# For tree handling
+library(ape)
+library(phyloseq)
+library(phytools)
+
+# For plotting
+library(ggplot2)
+library(ggrepel)
+library(ggpubr)
+library(ggnewscale)
+library(gridExtra)
+library(ggtreeExtra)
+library(ggtree)
+library(ggh4x)
+
+# For statistics
+library(spaa)
+library(vegan)
+library(Rtsne)
+library(geiger)
+library(ANCOMBC)
+library(lme4)
+library(Hmsc)
+library(matrixStats)
+library(MuMIn)
+#library(MASS)
+library(nlme)
+library(emmeans)
+library(hilldiv2)
+library(distillR)
+```
+
+<!--chapter:end:index.Rmd-->
+
+# Data preparation
+
+## Load data
+
+Load the original data files outputted by the bioinformatic pipeline.
+
+### Sample metadata
+
+```{r load_sample_metadata, warning=FALSE, comments="", message=FALSE}
+sample_metadata <- read_csv("data/sample_metadata.csv") %>%
+    rename(sample=CombinedID)
+```
+
+### Read counts
+
+```{r load_read_counts, warning=FALSE, comments="", message=FALSE}
+read_counts <- read_tsv("data/read_counts.tsv") %>%
+    rename(genome=1) %>%
+    dplyr::select(c("genome",sample_metadata$sample))
+```
+
+### Genome coverage
+
+```{r load_genome_hits, warning=FALSE, comments="", message=FALSE}
+genome_coverage <- read_tsv("data/genome_coverage.tsv") %>%
+    rename(genome=1) %>%
+    dplyr::select(c("genome",sample_metadata$sample))
+```
+
+### Genome metadata
+
+```{r load_genome_metadata, warning=FALSE, comments="", message=FALSE}
+genome_metadata <- read_csv("data/genome_metadata.csv") %>%
+    mutate(phylum = case_when(
+        phylum == "Actinobacteriota" ~ "Actinomycetota",
+        phylum == "Firmicutes" ~ "Bacillota",
+        phylum == "Firmicutes_A" ~ "Bacillota_A",
+        phylum == "Firmicutes_C" ~ "Bacillota_C",
+        phylum == "Proteobacteria" ~ "Pseudomonadota",
+        TRUE ~ phylum))
+```
+
+### Genome tree
+
+```{r load_genome_tree, warning=FALSE, comments="", message=FALSE}
+genome_tree <- read_tree("data/genome_tree.tre")
+genome_tree$tip.label <- str_replace_all(genome_tree$tip.label,"'", "") #remove single quotes in MAG names
+genome_tree <- keep.tip(genome_tree, tip=genome_metadata$genome) # keep only MAG tips
+```
+
+### Genome annotations
+
+```{r load_genome_annotations, warning=FALSE, comments="", message=FALSE}
+genome_annotations <- read_tsv("data/genome_annotations.tsv.xz") %>%
+    rename(gene=1, genome=2, contig=3)
+```
+
+## Create working objects
+
+Transform the original data files into working objects for downstream analyses.
+
+### Filter reads by coverage
+
+```{r filter_coverage, warning=FALSE, comments="", message=FALSE}
+min_coverage=0.3
+read_counts_filt <- genome_coverage %>%
+  mutate(across(where(is.numeric), ~ ifelse(. > min_coverage, 1, 0))) %>%
+  mutate(across(-1, ~ . * read_counts[[cur_column()]])) 
+```
+
+### Transform reads into genome counts
+
+```{r calculate_genome_counts_unfiltered, warning=FALSE, comments="", message=FALSE}
+readlength=150
+genome_counts <- read_counts %>%
+  mutate(across(where(is.numeric), ~ . / (genome_metadata$length / readlength) ))
+```
+
+```{r calculate_genome_counts_filtered, warning=FALSE, comments="", message=FALSE}
+readlength=150
+genome_counts_filt <- read_counts_filt %>%
+  mutate(across(where(is.numeric), ~ . / (genome_metadata$length / readlength) ))
+```
+
+### Distill annotations into GIFTs 
+
+```{r distill_annotations, warning=FALSE, comments="", message=FALSE}
+genome_gifts <- distill(genome_annotations,GIFT_db,genomecol=2,annotcol=c(9,10,19), verbosity=F)
+```
+
+## Prepare color scheme
+
+[AlberdiLab](www.alberdilab.dk) projects use unified color schemes developed for the [Earth Hologenome Initiative](www.earthhologenome.org), to facilitate figure interpretation.
+
+```{r get_ehi_colors, warning=FALSE, comments="", message=FALSE}
+phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
+    mutate(phylum=str_remove_all(phylum, "p__")) %>%
+    right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
+    arrange(match(genome, genome_tree$tip.label)) %>%
+    dplyr::select(phylum, colors) %>% 
+    unique() %>%
+    arrange(phylum) %>%
+    pull(colors, name=phylum)
+```
+
+## Prepare a phyloseq object
+
+```{r phyloseq_objects, warning=FALSE, comments="", message=FALSE}
+phylo_samples <- sample_metadata %>% 
+  column_to_rownames("sample") %>% 
+  sample_data() #convert to phyloseq sample_data object
+phylo_genome <- genome_counts %>% 
+  column_to_rownames("genome") %>% 
+  otu_table(., taxa_are_rows = TRUE)
+phylo_taxonomy <- genome_metadata %>%
+  dplyr::select(c(1,5:10))%>%
+  column_to_rownames("genome") %>% 
+  as.matrix() %>% 
+  tax_table() #convert to phyloseq tax_table object
+
+physeq_genome <- phyloseq(phylo_genome, phylo_taxonomy, phylo_samples)
+physeq_genome_clr <- microbiome::transform(physeq_genome, 'clr')
+
+```
+
+
+## Wrap working objects
+
+All working objects are wrapped into a single Rdata object to facilitate downstream usage.
+
+```{r wrap_working_objects, warning=FALSE, comments="", message=FALSE}
+save(sample_metadata, 
+     genome_metadata, 
+     read_counts, 
+     genome_counts, 
+     genome_counts_filt, 
+     genome_tree,
+     genome_gifts, 
+     phylum_colors,
+     physeq_genome,
+     physeq_genome_clr,
+     file = "data/data.Rdata")
+```
+
+<!--chapter:end:01_data_preparation.Rmd-->
+
+# MAG catalogue
+
+```{r load_data_mag}
+load("data/data.Rdata")
+```
+
+## Genome phylogeny
+
+```{r genome_phylogeny, message=FALSE, warning=FALSE, fig.height=10, fig.width=10, fig.fullwidth=TRUE}
+# Generate the phylum color heatmap
+phylum_heatmap <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
+    mutate(phylum=str_remove_all(phylum, "p__")) %>%
+    right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
+    arrange(match(genome, genome_tree$tip.label)) %>%
+    dplyr::select(genome,phylum) %>%
+    mutate(phylum = factor(phylum, levels = unique(phylum))) %>%
+    column_to_rownames(var = "genome")
+
+# Generate  basal tree
+circular_tree <- force.ultrametric(genome_tree, method="extend") %>% # extend to ultrametric for the sake of visualisation
+    ggtree(., layout="fan", open.angle=10, size=0.5)
+
+# Add phylum ring
+circular_tree <- gheatmap(circular_tree, phylum_heatmap, offset=0.55, width=0.1, colnames=FALSE) +
+        scale_fill_manual(values=phylum_colors) +
+        geom_tiplab2(size=1, hjust=-0.1) +
+        theme(legend.position = "none", plot.margin = margin(0, 0, 0, 0), panel.margin = margin(0, 0, 0, 0))
+
+# Flush color scale to enable a new color scheme in the next ring
+circular_tree <- circular_tree + new_scale_fill()
+
+# Add completeness ring
+circular_tree <- circular_tree +
+        new_scale_fill() +
+        scale_fill_gradient(low = "#d1f4ba", high = "#f4baba") +
+        geom_fruit(
+                data=genome_metadata,
+                geom=geom_bar,
+                mapping = aes(x=completeness, y=genome, fill=contamination),
+                offset = 0.55,
+                orientation="y",
+              stat="identity")
+
+# Add genome-size ring
+circular_tree <-  circular_tree +
+        new_scale_fill() +
+        scale_fill_manual(values = "#cccccc") +
+        geom_fruit(
+             data=genome_metadata,
+             geom=geom_bar,
+             mapping = aes(x=length, y=genome),
+                 offset = 0.05,
+                 orientation="y",
+         stat="identity")
+
+# Add text
+circular_tree <-  circular_tree +
+        annotate('text', x=2.7, y=0, label='            Phylum', family='arial', size=3.5) +
+        annotate('text', x=3.1, y=0, label='                         Genome quality', family='arial', size=3.5) +
+        annotate('text', x=3.5, y=0, label='                     Genome size', family='arial', size=3.5)
+
+#Plot circular tree
+circular_tree %>% open_tree(30) %>% rotate_tree(90)
+```
+
+## Genome quality
+
+```{r genome_quality}
+tibble(Completeness=
+         paste0(round(genome_metadata$completeness %>% mean(),2),
+                "±",
+                round(genome_metadata$completeness %>% sd(),2)),
+       Contamination=
+           paste0(round(genome_metadata$contamination %>% mean(),2),
+                "±",
+                round(genome_metadata$contamination %>% sd(),2))) %>%
+  tt()
+```
+
+```{r genome_quality_plot, message=FALSE, warning=FALSE, fig.height=6, fig.width=10, fig.fullwidth=TRUE}
+
+#Generate quality biplot
+genome_biplot <- genome_metadata %>%
+  dplyr::select(c(genome,phylum,completeness,contamination,length)) %>%
+  arrange(match(genome, rev(genome_tree$tip.label))) %>% #sort MAGs according to phylogenetic tree
+  ggplot(aes(x=completeness,y=contamination,size=length,color=phylum)) +
+              geom_point(alpha=0.7) +
+                    xlim(c(70,100)) +
+                    ylim(c(10,0)) +
+                    scale_color_manual(values=phylum_colors) +
+                    labs(y= "Contamination", x = "Completeness") +
+                    theme_classic() +
+                    theme(legend.position = "none")
+
+#Generate contamination boxplot
+genome_contamination <- genome_metadata %>%
+            ggplot(aes(y=contamination)) +
+                    ylim(c(10,0)) +
+                    geom_boxplot(colour = "#999999", fill="#cccccc") +
+                    theme_void() +
+                    theme(legend.position = "none",
+                        axis.title.x = element_blank(),
+                        axis.title.y = element_blank(),
+                        axis.text.y=element_blank(),
+                        axis.ticks.y=element_blank(),
+                        axis.text.x=element_blank(),
+                        axis.ticks.x=element_blank(),
+                        plot.margin = unit(c(0, 0, 0.40, 0),"inches")) #add bottom-margin (top, right, bottom, left)
+
+#Generate completeness boxplot
+genome_completeness <- genome_metadata %>%
+        ggplot(aes(x=completeness)) +
+                xlim(c(70,100)) +
+                geom_boxplot(colour = "#999999", fill="#cccccc") +
+                theme_void() +
+                theme(legend.position = "none",
+                    axis.title.x = element_blank(),
+                    axis.title.y = element_blank(),
+                    axis.text.y=element_blank(),
+                    axis.ticks.y=element_blank(),
+                    axis.text.x=element_blank(),
+                    axis.ticks.x=element_blank(),
+                    plot.margin = unit(c(0, 0, 0, 0.50),"inches")) #add left-margin (top, right, bottom, left)
+
+#Render composite figure
+grid.arrange(grobs = list(genome_completeness,genome_biplot,genome_contamination),
+        layout_matrix = rbind(c(1,1,1,1,1,1,1,1,1,1,1,4),
+                              c(2,2,2,2,2,2,2,2,2,2,2,3),
+                              c(2,2,2,2,2,2,2,2,2,2,2,3),
+                              c(2,2,2,2,2,2,2,2,2,2,2,3),
+                              c(2,2,2,2,2,2,2,2,2,2,2,3),
+                              c(2,2,2,2,2,2,2,2,2,2,2,3),
+                              c(2,2,2,2,2,2,2,2,2,2,2,3),
+                              c(2,2,2,2,2,2,2,2,2,2,2,3),
+                              c(2,2,2,2,2,2,2,2,2,2,2,3),
+                              c(2,2,2,2,2,2,2,2,2,2,2,3),
+                              c(2,2,2,2,2,2,2,2,2,2,2,3),
+                              c(2,2,2,2,2,2,2,2,2,2,2,3)))
+
+```
+
+
+## Functional overview
+
+```{r function_heatmap, message=FALSE, warning=FALSE, fig.height=10, fig.width=10, fig.fullwidth=TRUE}
+
+# Aggregate basal GIFT into elements
+function_table <- genome_gifts %>%
+    to.elements(., GIFT_db)
+
+# Generate  basal tree
+function_tree <- force.ultrametric(genome_tree, method="extend") %>%
+                ggtree(., size = 0.3) 
+
+#Add phylum colors next to the tree tips
+function_tree <- gheatmap(function_tree, phylum_heatmap, offset=0, width=0.1, colnames=FALSE) +
+            scale_fill_manual(values=phylum_colors) +
+            labs(fill="Phylum")
+
+#Reset fill scale to use a different colour profile in the heatmap
+function_tree <- function_tree + new_scale_fill()
+
+#Add functions heatmap
+function_tree <- gheatmap(function_tree, function_table, offset=0.5, width=3.5, colnames=FALSE) +
+            vexpand(.08) +
+            coord_cartesian(clip = "off") +
+            scale_fill_gradient(low = "#f4f4f4", high = "steelblue", na.value="white") +
+            labs(fill="GIFT")
+
+#Reset fill scale to use a different colour profile in the heatmap
+function_tree <- function_tree + new_scale_fill()
+
+# Add completeness barplots
+function_tree <- function_tree +
+            geom_fruit(data=genome_metadata,
+            geom=geom_bar,
+            grid.params=list(axis="x", text.size=2, nbreak = 1),
+            axis.params=list(vline=TRUE),
+            mapping = aes(x=length, y=genome, fill=completeness),
+                 offset = 3.8,
+                 orientation="y",
+                 stat="identity") +
+            scale_fill_gradient(low = "#cf8888", high = "#a2cc87") +
+            labs(fill="Genome\ncompleteness")
+
+function_tree
+```
+
+## Functional ordination
+
+```{r function_ordination, message=FALSE, fig.height=8, fig.width=10, fig.fullwidth=TRUE}
+# Generate the tSNE ordination
+tSNE_function <- Rtsne(X=function_table, dims = 2, check_duplicates = FALSE)
+
+# Plot the ordination
+function_ordination <- tSNE_function$Y %>%
+                as.data.frame() %>%
+                mutate(genome=rownames(function_table)) %>%
+                inner_join(genome_metadata, by="genome") %>%
+                rename(tSNE1="V1", tSNE2="V2") %>%
+                dplyr::select(genome,phylum,tSNE1,tSNE2, length) %>%
+                ggplot(aes(x = tSNE1, y = tSNE2, color = phylum, size=length))+
+                            geom_point(shape=16, alpha=0.7) +
+                            scale_color_manual(values=phylum_colors) +
+                            theme_minimal() +
+                labs(color="Phylum", size="Genome size") +
+                guides(color = guide_legend(override.aes = list(size = 5))) # enlarge Phylum dots in legend
+
+function_ordination
+```
+
+<!--chapter:end:02_mag_catalogue.Rmd-->
+
+# Community composition
+
+```{r load_data_community}
+load("data/data.Rdata")
+```
+
+## Taxonomy overview 
+
+### Stacked barplot
+
+```{r taxonomy_barplot, fig.height=6, fig.width=10, fig.fullwidth=TRUE}
+genome_counts_filt %>%
+  mutate_at(vars(-genome),~./sum(.)) %>% #apply TSS nornalisation
+  pivot_longer(-genome, names_to = "sample", values_to = "count") %>% #reduce to minimum number of columns
+  left_join(., genome_metadata, by = join_by(genome == genome)) %>% #append genome metadata
+  left_join(., sample_metadata, by = join_by(sample == sample)) %>% #append sample metadata
+  filter(count > 0) %>% #filter 0 counts
+  ggplot(., aes(x=sample,y=count, fill=phylum, group=phylum)) + #grouping enables keeping the same sorting of taxonomic units
+    geom_bar(stat="identity", colour="white", linewidth=0.1) + #plot stacked bars with white borders
+    scale_fill_manual(values=phylum_colors) +
+    facet_nested(. ~ Location + Origin,  scales="free") + #facet per day and treatment
+    guides(fill = guide_legend(ncol = 1)) +
+    theme(axis.text.x = element_blank(),
+          axis.ticks.x =element_blank(),
+          axis.title.x = element_blank(),
+          axis.text.y = element_text(size=8),
+          axis.title.y = element_text(size=12),
+          panel.background = element_blank(),
+          axis.line = element_line(linewidth = 0.5, linetype = "solid", colour = "black"),
+          panel.border = element_rect(colour = "black", fill = NA),
+          strip.background = element_rect(fill = "white", color = "black"),
+          strip.text = element_text(size = 12, lineheight = 0.6)) +
+   labs(fill="Phylum",y = "Relative abundance",x="Samples")
+```
+```{r taxonomy_barplot_location, fig.height=6, fig.width=10, fig.fullwidth=TRUE}
+genome_counts_filt %>%
+  mutate_at(vars(-genome),~./sum(.)) %>% #apply TSS nornalisation
+  pivot_longer(-genome, names_to = "sample", values_to = "count") %>% #reduce to minimum number of columns
+  left_join(., genome_metadata, by = join_by(genome == genome)) %>% #append genome metadata
+  left_join(., sample_metadata, by = join_by(sample == sample)) %>% #append sample metadata
+  filter(count > 0) %>% #filter 0 counts
+  ggplot(., aes(x=sample,y=count, fill=phylum, group=phylum)) + #grouping enables keeping the same sorting of taxonomic units
+    geom_bar(stat="identity", colour="white", linewidth=0.1) + #plot stacked bars with white borders
+    scale_fill_manual(values=phylum_colors) +
+    facet_grid(. ~ Location,  scales="free") + #facet per day and treatment
+    guides(fill = guide_legend(ncol = 1)) +
+    theme(axis.text.x = element_blank(),
+          axis.ticks.x =element_blank(),
+          axis.title.x = element_blank(),
+          axis.text.y = element_text(size=8),
+          axis.title.y = element_text(size=12),
+          panel.background = element_blank(),
+          axis.line = element_line(linewidth = 0.5, linetype = "solid", colour = "black"),
+          panel.border = element_rect(colour = "black", fill = NA),
+          strip.background = element_rect(fill = "white", color = "black"),
+          strip.text = element_text(size = 12, lineheight = 0.6)) +
+   labs(fill="Phylum",y = "Relative abundance",x="Samples")
+```
+### Phylum relative abundances
+
+```{r taxonomy_phylum_summary, warning=FALSE, comments="", message=FALSE}
+phylum_summary <- genome_counts_filt %>%
+  mutate_at(vars(-genome),~./sum(.)) %>% #apply TSS nornalisation
+  pivot_longer(-genome, names_to = "sample", values_to = "count") %>%
+  left_join(sample_metadata, by = join_by(sample == sample)) %>%
+  left_join(genome_metadata, by = join_by(genome == genome)) %>%
+  group_by(sample,phylum) %>%
+  summarise(relabun=sum(count))
+
+phylum_summary %>%
+    group_by(phylum) %>%
+    summarise(mean=mean(relabun, na.rm=T),sd=sd(relabun, na.rm=T)) %>%
+    arrange(-mean) %>%
+    tt()
+```
+
+```{r taxonomy_boxplot_phylum, warning=FALSE, comments="", message=FALSE, fig.height=8, fig.width=10, fig.fullwidth=TRUE}
+phylum_arrange <- phylum_summary %>%
+    group_by(phylum) %>%
+    summarise(mean=mean(relabun)) %>%
+    arrange(-mean) %>%
+    dplyr::select(phylum) %>%
+    pull()
+
+phylum_summary %>%
+  filter(phylum %in% phylum_arrange) %>%
+  mutate(phylum=factor(phylum,levels=rev(phylum_arrange))) %>%
+  left_join(sample_metadata, by = join_by(sample == sample)) %>%
+    filter(relabun > 0) %>%
+  ggplot(aes(x=relabun, y=phylum, group=phylum, color=phylum, fill=phylum)) +
+  scale_color_manual(values=phylum_colors[rev(phylum_arrange)]) +
+        scale_fill_manual(values=phylum_colors[-8]) +
+        geom_boxplot(alpha=0.2)+
+        geom_jitter(alpha=0.5) + 
+        facet_nested(. ~ Location)+ 
+        theme_minimal() + 
+        theme(legend.position="none",
+              strip.text.x = element_text(size = 14, color="black",face="bold"),
+              axis.text.x = element_text(vjust = 0.5, size = 10),
+              axis.text.y = element_text(size = 12),
+              axis.line = element_line(size = 0.5, linetype = "solid", colour = "black"),
+              axis.title = element_text(size = 14, face = "bold"),
+              axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
+              axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0))
+              ) +
+        labs(y="Phylum",x="Relative abundance")
+```
+```{r taxonomy_phylum_plot, warning=FALSE, comments="", message=FALSE, fig.height=8, fig.width=10, fig.fullwidth=TRUE}
+phylum_summary %>%
+  filter(phylum %in% phylum_arrange) %>%
+  mutate(phylum=factor(phylum,levels=rev(phylum_arrange))) %>%
+  left_join(sample_metadata, by = join_by(sample == sample)) %>%
+    filter(relabun > 0) %>%
+  ggplot(aes(x=relabun, y=phylum, group=phylum, color=phylum, fill=phylum)) +
+  scale_color_manual(values=phylum_colors[rev(phylum_arrange)]) +
+        scale_fill_manual(values=phylum_colors[-8]) +
+        geom_boxplot(alpha=0.2)+
+        geom_jitter(alpha=0.5) + 
+        theme_minimal() + 
+        theme(legend.position="none") +
+        labs(y="Phylum",x="Relative abundance")
+```
+
+### Phylum percentages by behaviour
+
+Tame cats
+```{r phylum_tame, comment="", echo=FALSE}
+physeq_tame <- subset_samples(physeq_genome, Origin == "Tame")
+physeq_tame <- prune_taxa(taxa_sums(physeq_tame)>0, physeq_tame)
+physeq_tame.phylum <- microbiome::aggregate_taxa(physeq_tame, 'phylum')
+physeq_tame.phylum.rel <-  microbiome::transform(physeq_tame.phylum, "compositional")
+tame.rel <- physeq_tame.phylum.rel@otu_table*100
+means.tame.rel <- as.data.frame(rowMeans(tame.rel))
+sd.tame.rel <- as.data.frame(rowSds(tame.rel, useNames = TRUE))
+summary.phylum.tame <- merge(means.tame.rel, sd.tame.rel, by="row.names")
+colnames(summary.phylum.tame) <- c("Phylum","mean", "sd")
+summary.phylum.tame%>%
+  arrange(-mean)%>%
+  tt()
+```
+
+Feral cats
+```{r phylum_feral, comment="", echo=FALSE}
+physeq_tame <- subset_samples(physeq_genome, Origin == "Feral")
+physeq_tame <- prune_taxa(taxa_sums(physeq_tame)>0, physeq_tame)
+physeq_tame.phylum <- microbiome::aggregate_taxa(physeq_tame, 'phylum')
+physeq_tame.phylum.rel <-  microbiome::transform(physeq_tame.phylum, "compositional")
+tame.rel <- physeq_tame.phylum.rel@otu_table*100
+means.tame.rel <- as.data.frame(rowMeans(tame.rel))
+sd.tame.rel <- as.data.frame(rowSds(tame.rel, useNames = TRUE))
+summary.phylum.tame <- merge(means.tame.rel, sd.tame.rel, by="row.names")
+colnames(summary.phylum.tame) <- c("Phylum","mean", "sd")
+summary.phylum.tame%>%
+  arrange(-mean)%>%
+  tt()
+```
+
+## Taxonomy boxplot
+
+### Family
+```{r taxonomy_family_summary, warning=FALSE, comments="", message=FALSE}
+family_summary <- genome_counts_filt %>%
+  mutate_at(vars(-genome),~./sum(.)) %>% #apply TSS nornalisation
+  pivot_longer(-genome, names_to = "sample", values_to = "count") %>% #reduce to minimum number of columns
+  left_join(sample_metadata, by = join_by(sample == sample)) %>% #append sample metadata
+  left_join(., genome_metadata, by = join_by(genome == genome)) %>% #append genome metadata
+  group_by(sample,family) %>%
+  summarise(relabun=sum(count))
+
+family_summary %>%
+    group_by(family) %>%
+    summarise(mean=mean(relabun, na.rm=T),sd=sd(relabun, na.rm=T)) %>%
+    arrange(-mean) %>%
+    tt()
+```
+
+
+```{r taxonomy_jitterplot_family, warning=FALSE, comments="", message=FALSE, fig.height=8, fig.width=10, fig.fullwidth=TRUE}
+family_arrange <- family_summary %>%
+    group_by(family) %>%
+    summarise(mean=sum(relabun)) %>%
+    arrange(-mean) %>%
+    dplyr::select(family) %>%
+    pull()
+
+# Per origin
+family_summary %>%
+    left_join(genome_metadata %>% dplyr::select(family,phylum) %>% unique(),by=join_by(family==family)) %>%
+    left_join(sample_metadata,by=join_by(sample==sample)) %>%
+    filter(family %in% family_arrange[1:20]) %>%
+    mutate(family=factor(family,levels=rev(family_arrange[1:20]))) %>%
+    filter(relabun > 0) %>%
+    ggplot(aes(x=relabun, y=family, group=family, color=phylum)) +
+        scale_color_manual(values=phylum_colors[-8]) +
+        geom_jitter(alpha=0.5) + 
+        facet_grid(.~Origin)+
+        theme_minimal() + 
+        labs(y="Family", x="Relative abundance", color="Phylum")
+
+# Per location
+family_summary %>%
+  left_join(genome_metadata %>% dplyr::select(family,phylum) %>% unique(),by=join_by(family==family)) %>%
+  left_join(sample_metadata,by=join_by(sample==sample)) %>%
+  filter(family %in% family_arrange[1:20]) %>%
+  mutate(family=factor(family,levels=rev(family_arrange[1:20]))) %>%
+  filter(relabun > 0) %>%
+  ggplot(aes(x=relabun, y=family, group=family, color=phylum, fill=phylum)) +
+  scale_color_manual(values=phylum_colors[-8]) +
+  scale_fill_manual(values=phylum_colors[-8]) +
+  geom_boxplot(alpha=0.2)+
+  geom_jitter(alpha=0.5) + 
+  facet_grid(.~Location)+
+  theme_minimal() +
+  theme(legend.position="none",
+              strip.text.x = element_text(size = 14, color="black",face="bold"),
+              axis.text.x = element_text(vjust = 0.5, size = 10),
+              axis.text.y = element_text(size = 12),
+              axis.line = element_line(size = 0.5, linetype = "solid", colour = "black"),
+              axis.title = element_text(size = 14, face = "bold"),
+              axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
+              axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)))+
+  labs(y="Family", x="Relative abundance", color="Phylum")
+
+```
+
+### Genus
+
+```{r taxonomy_genus_summary, warning=FALSE, comments="", message=FALSE}
+genus_summary <- genome_counts_filt %>%
+  mutate_at(vars(-genome),~./sum(.)) %>% #apply TSS nornalisation
+  pivot_longer(-genome, names_to = "sample", values_to = "count") %>% #reduce to minimum number of columns
+  left_join(sample_metadata, by = join_by(sample == sample)) %>% #append sample metadata
+  left_join(genome_metadata, by = join_by(genome == genome)) %>% #append genome metadata
+  group_by(sample,phylum,genus) %>%
+  summarise(relabun=sum(count)) %>%
+  filter(genus != "g__") %>%
+  mutate(genus= sub("^g__", "", genus))
+
+genus_summary_sort <- genus_summary %>%
+    group_by(genus) %>%
+    summarise(mean=mean(relabun, na.rm=T),sd=sd(relabun, na.rm=T)) %>%
+    arrange(-mean) 
+
+genus_summary_sort %>%
+    tt()
+```
+
+```{r taxonomy_jitterplot_genus, fig.height=14, fig.width=10, fig.fullwidth=TRUE}
+genus_arrange <- genus_summary %>%
+    group_by(genus) %>%
+    summarise(mean=sum(relabun)) %>%
+    filter(genus != "g__")%>%
+    arrange(-mean) %>%
+    dplyr::select(genus) %>%
+    mutate(genus= sub("^g__", "", genus)) %>%
+    pull()
+
+#Per day
+genus_summary %>%
+    left_join(sample_metadata,by=join_by(sample==sample)) %>%
+    mutate(genus=factor(genus, levels=rev(genus_summary_sort %>% pull(genus)))) %>%
+    filter(relabun > 0) %>%
+    ggplot(aes(x=relabun, y=genus, group=genus, color=phylum)) +
+        scale_color_manual(values=phylum_colors) +
+        geom_jitter(alpha=0.5) + 
+        facet_grid(.~Origin)+
+        theme_minimal() + 
+        labs(y="Family", x="Relative abundance", color="Phylum")
+
+```
+
+
+<!--chapter:end:03_community_composition.Rmd-->
+
+# Alpha diversity
+
+```{r load_data_alpha}
+load("data/data.Rdata")
+```
+
+```{r alpha_div, comment="", message=FALSE, warning=FALSE}
+# Calculate Hill numbers
+richness <- genome_counts_filt %>%
+  column_to_rownames(var = "genome") %>%
+  dplyr::select(where(~ !all(. == 0))) %>%
+  hilldiv(., q = 0) %>%
+  t() %>%
+  as.data.frame() %>%
+  dplyr::rename(richness = 1) %>%
+  rownames_to_column(var = "sample")
+
+neutral <- genome_counts_filt %>%
+  column_to_rownames(var = "genome") %>%
+  dplyr::select(where(~ !all(. == 0))) %>%
+  hilldiv(., q = 1) %>%
+  t() %>%
+  as.data.frame() %>%
+  dplyr::rename(neutral = 1) %>%
+  rownames_to_column(var = "sample")
+
+phylogenetic <- genome_counts_filt %>%
+  column_to_rownames(var = "genome") %>%
+  dplyr::select(where(~ !all(. == 0))) %>%
+  hilldiv(., q = 1, tree = genome_tree) %>%
+  t() %>%
+  as.data.frame() %>%
+  dplyr::rename(phylogenetic = 1) %>%
+  rownames_to_column(var = "sample")
+
+# Aggregate basal GIFT into elements
+dist <- genome_gifts %>%
+  to.elements(., GIFT_db) %>%
+  traits2dist(., method = "gower")
+
+functional <- genome_counts_filt %>%
+  column_to_rownames(var = "genome") %>%
+  dplyr::select(where(~ !all(. == 0))) %>%
+  hilldiv(., q = 1, dist = dist) %>%
+  t() %>%
+  as.data.frame() %>%
+  dplyr::rename(functional = 1) %>%
+  rownames_to_column(var = "sample") %>%
+  mutate(functional = if_else(is.nan(functional), 1, functional))
+
+# Merge all metrics
+alpha_div <- richness %>%
+  full_join(neutral, by = join_by(sample == sample)) %>%
+  full_join(phylogenetic, by = join_by(sample == sample)) %>%
+  full_join(functional, by = join_by(sample == sample))
+```
+
+```{r alpha_div_boxplot, comment="", message=FALSE, warning=FALSE, fig.height=3, fig.width=10, fig.fullwidth=TRUE}
+
+#Richness
+alpha_div %>%
+  pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
+  left_join(., sample_metadata, by = join_by(sample == sample)) %>%
+  filter(!is.na(Location)) %>%
+  filter(metric=="richness") %>%
+      ggplot(aes(y = value, x = Origin, group=Origin, color=Origin, fill=Origin)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha=0.5) +
+      scale_color_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          values=c("#6A9AC3","#F3B942")) +
+      scale_fill_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          values=c("#6A9AC350","#F3B94250")) +
+      facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
+      coord_cartesian(xlim = c(1, NA)) +
+      theme_classic() +
+      theme(
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_line(size = .1, color = "grey"),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1)
+      )
+
+#Neutral
+alpha_div %>%
+  pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
+  left_join(., sample_metadata, by = join_by(sample == sample)) %>%
+  filter(!is.na(Location)) %>%
+  filter(metric=="neutral") %>%
+      ggplot(aes(y = value, x = Origin, group=Origin, color=Origin, fill=Origin)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha=0.5) +
+      scale_color_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          values=c("#6A9AC3","#F3B942")) +
+      scale_fill_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          values=c("#6A9AC350","#F3B94250")) +
+      facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
+      coord_cartesian(xlim = c(1, NA)) +
+      theme_classic() +
+      theme(
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_line(size = .1, color = "grey"),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1)
+      )
+
+#Phylogenetic
+alpha_div %>%
+  pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
+  left_join(., sample_metadata, by = join_by(sample == sample)) %>%
+  filter(!is.na(Location)) %>%
+  filter(metric=="phylogenetic") %>%
+      ggplot(aes(y = value, x = Origin, group=Origin, color=Origin, fill=Origin)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha=0.5) +
+      scale_color_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          values=c("#6A9AC3","#F3B942")) +
+      scale_fill_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          values=c("#6A9AC350","#F3B94250")) +
+      facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
+      coord_cartesian(xlim = c(1, NA)) +
+      theme_classic() +
+      theme(
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_line(size = .1, color = "grey"),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1)
+      )
+
+#Functional
+alpha_div %>%
+  pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
+  left_join(., sample_metadata, by = join_by(sample == sample)) %>%
+  filter(!is.na(Location)) %>%
+  filter(metric=="functional") %>%
+      ggplot(aes(y = value, x = Origin, group=Origin, color=Origin, fill=Origin)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha=0.5) +
+      scale_color_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          values=c("#6A9AC3","#F3B942")) +
+      scale_fill_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          values=c("#6A9AC350","#F3B94250")) +
+      facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
+      coord_cartesian(xlim = c(1, NA)) +
+      theme_classic() +
+      theme(
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_line(size = .1, color = "grey"),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1)
+      )
+```
+
+## Mixed models 
+
+```{r model_rich, comment="", message=FALSE, warning=FALSE}
+library(MASS)
+alpha_div_meta <- alpha_div %>%
+  left_join(sample_metadata, by = join_by(sample == sample))
+Modelq0_all <- MASS::glm.nb(richness ~ Location+Age+F.M+Bites+Hisses+Retreats+Vocalization+Acceptance+Sedating+Healthy+Dry_skin+Stiff+Agile, data = alpha_div_meta,trace=TRUE)
+anova(Modelq0_all)
+Modelq0_Loca <- MASS::glm.nb(richness ~ Location, data = alpha_div_meta,trace=TRUE)
+anova(Modelq0_Loca)
+r.squaredGLMM(Modelq0_Loca)
+emmeans(Modelq0_Loca, pairwise ~ Location)
+detach("package:MASS", unload = TRUE)
+```
+
+```{r model_neutral, comment="", message=FALSE, warning=FALSE}
+#Modelq1_all <- lm(formula = neutral ~ Location+Age+F.M+Bites+Hisses+Retreats+Vocalization+Acceptance+Sedating+Healthy+Dry_skin+Stiff+Agile, data = alpha_div_meta)
+#anova(Modelq1_all)
+Modelq1_Loca <- lm(formula = neutral ~ Location, data = alpha_div_meta) 
+anova(Modelq1_Loca)
+r.squaredGLMM(Modelq1_Loca)
+emmeans(Modelq1_Loca, pairwise ~ Location)
+```
+
+```{r model_phylo, comment="", message=FALSE, warning=FALSE}
+Modelq1p_Loca <- lm(formula = phylogenetic ~ Location, data = alpha_div_meta) 
+anova(Modelq1p_Loca)
+r.squaredGLMM(Modelq1p_Loca)
+emmeans(Modelq1p_Loca, pairwise ~ Location)
+```
+
+```{r model_funct, comment="", message=FALSE, warning=FALSE}
+Modelq1F_Loca <- lm(formula = functional ~ Location, data = alpha_div_meta) 
+anova(Modelq1F_Loca)
+r.squaredGLMM(Modelq1F_Loca)
+emmeans(Modelq1F_Loca, pairwise ~ Location)
+```
+
+
+<!--chapter:end:04_alpha_diversity.Rmd-->
+
+# Beta diversity
+
+```{r load_data_beta}
+load("data/data.Rdata")
+```
+
+```{r beta_div, comment="", message=FALSE, warning=FALSE}
+beta_q0n <- genome_counts_filt %>%
+  column_to_rownames(., "genome") %>%
+  filter(rowSums(. != 0, na.rm = TRUE) > 0) %>%
+  dplyr::select_if(~!all(. == 0)) %>%
+  hillpair(., q = 0)
+
+beta_q1n <- genome_counts_filt %>%
+  column_to_rownames(., "genome") %>%
+  filter(rowSums(. != 0, na.rm = TRUE) > 0) %>%
+  dplyr::select_if(~!all(. == 0)) %>%
+  hillpair(., q = 1)
+
+beta_q1p <- genome_counts_filt %>%
+  column_to_rownames(., "genome") %>%
+  filter(rowSums(. != 0, na.rm = TRUE) > 0) %>%
+  dplyr::select_if(~!all(. == 0)) %>%
+  hillpair(., q = 1, tree = genome_tree)
+
+beta_q1f <- genome_counts_filt %>%
+  column_to_rownames(., "genome") %>%
+  filter(rowSums(. != 0, na.rm = TRUE) > 0) %>%
+  dplyr::select_if(~!all(. == 0)) %>%
+  hillpair(., q = 1, dist = dist)
+```
+
+## Permanova
+
+```{r permanova, comment="", message=FALSE, warning=FALSE}
+#Richness
+betadisper(beta_q0n$C, sample_metadata$Origin) %>% permutest(., pairwise = TRUE) 
+adonis2(beta_q0n$C ~ Origin, 
+        data = sample_metadata %>% arrange(match(sample,labels(beta_q0n$C))), 
+        permutations = 999, 
+        strata = sample_metadata %>% arrange(match(sample,labels(beta_q0n$C))) %>% pull(Location)) %>%
+        broom::tidy() %>%
+        tt()
+
+#Neutral diversity
+betadisper(beta_q1n$C, sample_metadata$Origin) %>% permutest(., pairwise = TRUE) 
+adonis2(beta_q1n$C ~ Origin, 
+        data = sample_metadata %>% arrange(match(sample,labels(beta_q1n$C))), 
+        permutations = 999, 
+        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$C))) %>% pull(Location)) %>%
+        broom::tidy() %>%
+        tt()
+
+#Phylogenetic diversity
+betadisper(beta_q1p$C, sample_metadata$Origin) %>% permutest(., pairwise = TRUE) 
+adonis2(beta_q1p$C ~ Origin, 
+        data = sample_metadata %>% arrange(match(sample,labels(beta_q1p$C))), 
+        permutations = 999, 
+        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1p$C))) %>% pull(Location)) %>%
+        broom::tidy() %>%
+        tt()
+
+#Functional diversity
+betadisper(beta_q1f$C, sample_metadata$Origin) %>% permutest(., pairwise = TRUE) 
+adonis2(beta_q1f$C ~ Origin, 
+        data = sample_metadata %>% arrange(match(sample,labels(beta_q1f$C))), 
+        permutations = 999, 
+        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1f$C))) %>% pull(Location)) %>%
+        broom::tidy() %>%
+        tt()
+```
+
+## Richness diversity plot
+
+```{r beta_div_nmds_neutral_plot, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
+beta_q0n$S %>%
+  vegan::metaMDS(., trymax = 500, k = 2, trace=0) %>%
+  vegan::scores() %>%
+  as_tibble(., rownames = "sample") %>%
+  dplyr::left_join(sample_metadata, by = join_by(sample == sample)) %>%
+  group_by(Origin,Location) %>%
+  mutate(x_cen = mean(NMDS1, na.rm = TRUE)) %>%
+  mutate(y_cen = mean(NMDS2, na.rm = TRUE)) %>%
+  ungroup() %>%
+  ggplot(aes(x = NMDS1, y = NMDS2, color = Origin, fill = Origin, shape = as.factor(Location))) +
+      scale_color_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          values=c("#6A9AC3","#F3B942")) +
+      scale_fill_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          values=c("#6A9AC350","#F3B94250")) +
+    geom_point(size = 4) +
+    #   stat_ellipse(aes(color = beta_q1n_nmds$Groups))+
+    geom_segment(aes(x = x_cen, y = y_cen, xend = NMDS1, yend = NMDS2), alpha = 0.9) +
+    theme_classic() +
+    theme(
+      axis.text.x = element_text(size = 12),
+      axis.text.y = element_text(size = 12),
+      axis.title = element_text(size = 20, face = "bold"),
+      axis.text = element_text(face = "bold", size = 18),
+      panel.background = element_blank(),
+      axis.line = element_line(size = 0.5, linetype = "solid", colour = "black"),
+      legend.text = element_text(size = 16),
+      legend.title = element_text(size = 18),
+      legend.position = "right", legend.box = "vertical"
+    ) +
+    labs(shape="Individual")
+```
+
+
+## Neutral diversity plot
+
+```{r beta_div_nmds_phylo_plot, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
+beta_q1n$S %>%
+  vegan::metaMDS(., trymax = 500, k = 2, trace=0) %>%
+  vegan::scores() %>%
+  as_tibble(., rownames = "sample") %>%
+  dplyr::left_join(sample_metadata, by = join_by(sample == sample)) %>%
+  group_by(Origin,Location) %>%
+  mutate(x_cen = mean(NMDS1, na.rm = TRUE)) %>%
+  mutate(y_cen = mean(NMDS2, na.rm = TRUE)) %>%
+  ungroup() %>%
+  ggplot(aes(x = NMDS1, y = NMDS2, color = Origin, fill = Origin, shape = as.factor(Location))) +
+      scale_color_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          values=c("#6A9AC3","#F3B942")) +
+      scale_fill_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          values=c("#6A9AC350","#F3B94250")) +
+    geom_point(size = 4) +
+    #   stat_ellipse(aes(color = beta_q1n_nmds$Groups))+
+    geom_segment(aes(x = x_cen, y = y_cen, xend = NMDS1, yend = NMDS2), alpha = 0.9) +
+    theme_classic() +
+    theme(
+      axis.text.x = element_text(size = 12),
+      axis.text.y = element_text(size = 12),
+      axis.title = element_text(size = 20, face = "bold"),
+      axis.text = element_text(face = "bold", size = 18),
+      panel.background = element_blank(),
+      axis.line = element_line(size = 0.5, linetype = "solid", colour = "black"),
+      legend.text = element_text(size = 16),
+      legend.title = element_text(size = 18),
+      legend.position = "right", legend.box = "vertical"
+    ) +
+    labs(shape="Individual")
+```
+
+<!--chapter:end:05_beta_diversity.Rmd-->
+
+# HMSC setup
+
+## Setup
+
+```{r load_data_hmsc_setup}
+load("data/data.Rdata")
+```
+
+```{r hmsc_input, warning=FALSE, comments="", message=FALSE}
+# Random effects data (study design)
+StudyDesign <- sample_metadata %>%
+                    dplyr::select(sample,Location) %>% 
+                    rename(location=Location) %>% 
+                    column_to_rownames("sample") %>% 
+                    mutate(location = factor(location))
+
+# Genome count table (quantitative community data)
+YData <- read_counts %>% 
+                    mutate(across(where(is.numeric), ~ . +1 )) %>% #add +1 pseudocount to remove zeros
+                    mutate(across(where(is.numeric), ~ . / (genome_metadata$length / 150) )) %>% #transform to genome counts
+                    mutate(across(where(is.numeric), ~  log(.) )) %>% #log-transform
+                    arrange(genome) %>%
+                    column_to_rownames("genome") %>% 
+                    dplyr::select(all_of(row.names(StudyDesign))) %>%  #filter only faecal samples
+                    as.data.frame() %>%
+                    t() # transpose
+
+# Fixed effects data (explanatory variables)
+XData <- sample_metadata %>% 
+                    column_to_rownames("sample") %>% 
+                    mutate(logseqdepth=read_counts %>% #total log-sequencing depth
+                        dplyr::select(all_of(row.names(StudyDesign))) %>% 
+                        colSums() %>% 
+                        log()
+                    ) %>% 
+                    rename(origin=Origin, sex=F.M) %>% 
+                    mutate(origin = factor(origin)) %>%
+                    mutate(sex = factor(sex)) %>% 
+                    dplyr::select(origin, sex, logseqdepth)
+
+# Genome phylogeny
+PData <- genome_tree
+```
+
+## Define formulas of the Hmsc model
+
+```{r hmsc_formulas, warning=FALSE, comments="", message=FALSE}
+# Fixed effects formula
+XFormula = ~origin + sex + logseqdepth
+
+# Study design
+rL.location = HmscRandomLevel(units = levels(StudyDesign$location))
+```
+
+## Define and Hmsc models
+```{r hmsc_models, warning=FALSE, comments="", message=FALSE}
+#Define models
+model1 = Hmsc(Y=YData,
+         XData = XData, 
+         XFormula = XFormula,
+         studyDesign = StudyDesign,
+         phyloTree = PData, 
+         ranLevels=list("location"=rL.location),
+         distr = "normal",
+         YScale = TRUE)
+
+#Save list of models as an R object.
+model_list = list(model1=model1)
+if (!dir.exists("hmsc")){dir.create("hmsc")}
+save(model_list, file = "hmsc/hmsc.Rdata")
+```
+
+Upload **hmsc/hmsc.Rdata** to the HPC respecting the directory structure.
+
+## Define MCMC
+```{r hmsc_mcmc, warning=FALSE, comments="", message=FALSE}
+# How often to sample the MCMC
+MCMC_samples_list = 250
+
+# The number of MCMC steps between each recording sample
+MCMC_thin_list = 10
+
+# The number of MCMC chains to use
+nChains = 4
+```
+
+## Generate Hmsc executables
+
+The next chunk generates shell files for every combination of model, MCMC samples and MCMM thinning, ready to be launched as SLURM jobs.
+
+```{r hmsc_executables, warning=FALSE, comments="", message=FALSE}
+
+modelchains <- expand.grid(model = names(model_list), sample = MCMC_samples_list, thin = MCMC_thin_list)
+
+if (!dir.exists("hmsc")){dir.create("hmsc")}
+for(i in c(1:nrow(modelchains))){
+      modelname=as.character(modelchains[i,1])
+      sample=modelchains[i,2]
+      thin=modelchains[i,3]
+      executablename <- paste0("hmsc/exe_",modelname,"_",sample,"_",thin,".sh")
+      fitname <- paste0("fit_",modelname,"_",sample,"_",thin,".Rdata")
+      convname <- paste0("conv_",modelname,"_",sample,"_",thin,".Rdata")
+      model <- paste0('model_list$',modelname)
+      psrf.beta.name <-  paste0("psrf.beta.",modelname,"_",sample,"_",thin)
+      psrf.gamma.name <-  paste0("psrf.gamma.",modelname,"_",sample,"_",thin)
+      psrf.rho.name <-  paste0("psrf.rho.",modelname,"_",sample,"_",thin)
+      jobname <- paste0("hmsc_",modelname,"_",sample,"_",thin)
+      minutes <- 1000
+      code <- sprintf("#!/bin/bash
+#SBATCH --job-name=%s                   # Job name
+#SBATCH --nodes=1
+#SBATCH --ntasks=4                      # Run on 4 CPUs
+#SBATCH --mail-user=antton.alberdi@sund.ku.dk
+#SBATCH --mem=96gb                      # Job memory request
+#SBATCH --time=%d                       # In minutes
+
+# Activate conda environment
+module load mamba/1.3.1
+source activate /maps/projects/mjolnir1/people/jpl786/AMAC001_fibre_trial/hmsc/hmsc_env
+
+# Run R script
+Rscript -e '
+library(tidyverse)
+library(Hmsc)
+# Load formulas and data
+load(\"hmsc.Rdata\")
+
+# Declare placeholders
+modelname = \"%s\"
+model = %s
+fitname = \"%s\"
+convname = \"%s\"
+sample = %d
+thin = %d
+nchains = %d
+
+# Run model fitting
+m = sampleMcmc(hM = model, 
+         samples = sample, 
+         thin = thin,
+         adaptNf=rep(ceiling(0.4*sample*thin),model$nr),
+         transient = ceiling(0.5*sample*thin),
+         nChains = nchains,
+         nParallel = nchains)
+         
+# Assess chain convergence
+mpost = convertToCodaObject(m, 
+      spNamesNumbers = c(T,F), 
+      covNamesNumbers = c(T,F),
+      Beta = TRUE,
+      Gamma = TRUE,
+      V = FALSE,
+      Sigma = FALSE,
+      Rho = TRUE,
+      Eta = FALSE,
+      Lambda = FALSE,
+      Alpha = FALSE,
+      Omega = FALSE,
+      Psi = FALSE,
+      Delta = FALSE) # Convert to CODA object
+
+# Fixed effects
+assign(paste0(\"psrf.beta.\", modelname,\"_\",sample,\"_\",thin), gelman.diag(mpost$Beta,multivariate=FALSE)$psrf)
+
+# Traits
+assign(paste0(\"psrf.gamma.\", modelname,\"_\",sample,\"_\",thin), gelman.diag(mpost$Gamma,multivariate=FALSE)$psrf)
+
+# Phylogeny
+assign(paste0(\"psrf.rho.\", modelname,\"_\",sample,\"_\",thin), gelman.diag(mpost$Rho,multivariate=FALSE)$psrf)
+
+# Write convergence data
+save(%s, %s, %s, file=convname)
+
+# Save model fit object
+save(m, file=fitname)
+'
+", jobname, minutes, modelname, model, fitname, convname, sample, thin, nChains, psrf.beta.name, psrf.gamma.name, psrf.rho.name)
+      writeLines(code, executablename)
+    }
+```
+
+Upload the produced **hmsc/exe_XXXXX.sh** files to the HPC respecting the directory structure.
+
+## Fit Hmsc models (in Mjolnir HPC)
+
+Launch the SLURM jobs by using:
+
+```{sh, eval=FALSE}
+#Create and define tmpdir
+tmpdir="./tmp"
+mkdir -p "$tmpdir"
+export TMPDIR="$tmpdir"
+
+#Or launch them one by one only the ones you want to launch
+sbatch exe_model1_250_1.sh
+```
+
+<!--chapter:end:06_hmsc_setup.Rmd-->
+
+# HMSC analysis
+
+## Load data
+
+```{r load_data_hmsc_analysis}
+load("data/data.Rdata")
+load("hmsc/fit_model1_250_10.Rdata")
+```
+
+## Variance partitioning
+
+```{r hmsc_variancepart, warning=FALSE, comments="", message=FALSE}
+
+# Compute variance partitioning
+varpart=computeVariancePartitioning(m)
+
+varpart$vals %>%
+   as.data.frame() %>%
+   rownames_to_column(var="variable") %>%
+   pivot_longer(!variable, names_to = "genome", values_to = "value") %>%
+   mutate(variable=factor(variable, levels=rev(c("origin","sex","logseqdepth","Random: location")))) %>%
+   group_by(variable) %>%
+   summarise(mean=mean(value)*100,sd=sd(value)*100) %>%
+   tt()
+```
+
+```{r hmsc_varpart_plot, warning=FALSE, comments="", message=FALSE}
+# Basal tree
+varpart_tree <- genome_tree
+
+#Varpart table
+varpart_table <- varpart$vals %>%
+   as.data.frame() %>%
+   rownames_to_column(var="variable") %>%
+   pivot_longer(!variable, names_to = "genome", values_to = "value") %>%
+   mutate(genome=factor(genome, levels=rev(varpart_tree$tip.label))) %>%
+   mutate(variable=factor(variable, levels=rev(c("origin","sex","logseqdepth","Random: location"))))
+
+#Phylums
+phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
+    mutate(phylum=str_remove_all(phylum, "p__"))%>%
+  right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
+    filter(genome %in% varpart_tree$tip.label) %>%
+    arrange(match(genome, varpart_tree$tip.label)) %>%
+    mutate(phylum = factor(phylum, levels = unique(phylum))) %>%
+    column_to_rownames(var = "genome") %>%
+    dplyr::select(phylum)
+
+colors_alphabetic <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
+    mutate(phylum=str_remove_all(phylum, "p__"))%>%
+  right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
+    filter(genome %in% varpart_tree$tip.label) %>%
+    arrange(match(genome, varpart_tree$tip.label)) %>%
+     dplyr::select(phylum, colors) %>%
+    unique() %>%
+    arrange(phylum) %>%
+    dplyr::select(colors) %>%
+    pull()
+
+# Basal ggtree
+varpart_tree <- varpart_tree %>%
+        force.ultrametric(.,method="extend") %>%
+        ggtree(., size = 0.3)
+
+# Add phylum colors next to the tree tips
+varpart_tree <- gheatmap(varpart_tree, phylum_colors, offset=-0.2, width=0.1, colnames=FALSE) +
+   scale_fill_manual(values=colors_alphabetic)+
+      labs(fill="Phylum")
+
+#Reset fill scale to use a different colour profile in the heatmap
+varpart_tree <- varpart_tree + new_scale_fill()
+
+# Add variance stacked barplot
+vertical_tree <-  varpart_tree +
+       scale_fill_manual(values=c("#506a96","#cccccc","#be3e2b","#f6de6c"))+
+        geom_fruit(
+             data=varpart_table,
+             geom=geom_bar,
+             mapping = aes(x=value, y=genome, fill=variable, group=variable),
+             pwidth = 2,
+             offset = 0.05,
+             width= 1,
+             orientation="y",
+             stat="identity")+
+      labs(fill="Variable")
+
+vertical_tree
+```
+
+## Posterior estimates
+```{r hmsc_postestimates, warning=FALSE, comments="", message=FALSE}
+# Select desired support threshold
+support=0.9
+negsupport=1-support
+
+# Basal tree
+postestimates_tree <- genome_tree
+
+# Posterior estimate table
+post_beta <- getPostEstimate(hM=m, parName="Beta")$support %>%
+    as.data.frame() %>%
+    mutate(variable=m$covNames) %>%
+    pivot_longer(!variable, names_to = "genome", values_to = "value") %>%
+    mutate(genome=factor(genome, levels=rev(postestimates_tree$tip.label))) %>%
+    mutate(value = case_when(
+          value >= support ~ "Positive",
+          value <= negsupport ~ "Negative",
+          TRUE ~ "Neutral")) %>%
+    mutate(value=factor(value, levels=c("Positive","Neutral","Negative"))) %>%
+    pivot_wider(names_from = variable, values_from = value) %>%
+    #select(genome,sp_vulgaris,area_semi,area_urban,sp_vulgarisxarea_semi,sp_vulgarisxarea_urban,season_spring,season_winter,sp_vulgarisxseason_spring,sp_vulgarisxseason_winter) %>%
+    column_to_rownames(var="genome")
+
+#Phylums
+phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
+    mutate(phylum=str_remove_all(phylum, "p__")) %>%
+    right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
+    filter(genome %in% postestimates_tree$tip.label) %>%
+    arrange(match(genome, postestimates_tree$tip.label)) %>%
+    mutate(phylum = factor(phylum, levels = unique(phylum))) %>%
+    column_to_rownames(var = "genome") %>%
+    dplyr::select(phylum)
+
+colors_alphabetic <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
+    mutate(phylum=str_remove_all(phylum, "p__")) %>%
+    right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
+    filter(genome %in% postestimates_tree$tip.label) %>%
+    arrange(match(genome, postestimates_tree$tip.label)) %>%
+     dplyr::select(phylum, colors) %>%
+    unique() %>%
+    arrange(phylum) %>%
+    dplyr::select(colors) %>%
+    pull()
+
+# Basal ggtree
+postestimates_tree <- postestimates_tree %>%
+        force.ultrametric(.,method="extend") %>%
+        ggtree(., size = 0.3)
+
+#Add phylum colors next to the tree tips
+postestimates_tree <- gheatmap(postestimates_tree, phylum_colors, offset=-0.2, width=0.1, colnames=FALSE) +
+      scale_fill_manual(values=colors_alphabetic)+
+      labs(fill="Phylum")
+
+#Reset fill scale to use a different colour profile in the heatmap
+postestimates_tree <- postestimates_tree + new_scale_fill()
+
+# Add posterior significant heatmap
+
+postestimates_tree <- gheatmap(postestimates_tree, post_beta, offset=0, width=0.5, colnames=TRUE, colnames_position="top",colnames_angle=90, colnames_offset_y=1, hjust=0) +
+        scale_fill_manual(values=c("#be3e2b","#f4f4f4","#b2b530"))+
+        labs(fill="Trend")
+
+postestimates_tree +
+        vexpand(.25, 1) # expand top 
+```
+
+### Origin
+
+#### Positively associated genomes with domestic cats
+
+```{r hmsc_positive_origin, warning=FALSE, comments="", message=FALSE}
+getPostEstimate(hM=m, parName="Beta")$support %>%
+    as.data.frame() %>%
+    mutate(variable=m$covNames) %>%
+    pivot_longer(!variable, names_to = "genome", values_to = "value") %>%
+    mutate(trend = case_when(
+          value >= support ~ "Positive",
+          value <= negsupport ~ "Negative",
+          TRUE ~ "Neutral")) %>%
+    filter(variable=="originTame", trend=="Positive") %>%
+    arrange(-value) %>%
+    left_join(genome_metadata,by=join_by(genome==genome)) %>%
+    dplyr::select(genome,phylum,class,order,family,species,value) %>%
+    arrange(phylum, class, family, species)%>%
+  paged_table()
+```
+
+#### Positively associated genomes feral cats
+
+```{r hmsc_negative_origin, warning=FALSE, comments="", message=FALSE}
+getPostEstimate(hM=m, parName="Beta")$support %>%
+    as.data.frame() %>%
+    mutate(variable=m$covNames) %>%
+    pivot_longer(!variable, names_to = "genome", values_to = "value") %>%
+    mutate(trend = case_when(
+          value >= support ~ "Positive",
+          value <= negsupport ~ "Negative",
+          TRUE ~ "Neutral")) %>%
+    filter(variable=="originTame", trend=="Negative") %>%
+    arrange(value) %>%
+    left_join(genome_metadata,by=join_by(genome==genome)) %>%
+    dplyr::select(genome,phylum,class,order,family,species,value) %>%
+    arrange(phylum,class,family,species)%>%
+  paged_table()
+```
+
+#### Estimate - support plot
+```{r hmsc_support_plot_origin, warning=FALSE, comments="", message=FALSE}
+estimate <- getPostEstimate(hM=m, parName="Beta")$mean %>%
+    as.data.frame() %>%
+    mutate(variable=m$covNames) %>%
+    filter(variable=="originTame") %>%
+    pivot_longer(!variable, names_to = "genome", values_to = "mean") %>%
+    dplyr::select(genome,mean)
+
+support <- getPostEstimate(hM=m, parName="Beta")$support %>%
+    as.data.frame() %>%
+    mutate(variable=m$covNames) %>%
+    filter(variable=="originTame") %>%
+    pivot_longer(!variable, names_to = "genome", values_to = "support") %>%
+    dplyr::select(genome,support)
+
+phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
+    mutate(phylum=str_remove_all(phylum, "p__")) %>%
+  right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
+  filter(genome %in% estimate$genome) %>%
+  arrange(match(genome, estimate$genome)) %>%
+  dplyr::select(phylum, colors) %>%
+  unique() %>%
+  arrange(phylum) %>%
+  dplyr::select(colors) %>%
+  pull()
+
+inner_join(estimate,support,by=join_by(genome==genome)) %>%
+    mutate(significance=ifelse(support >= 0.9 | support <= 0.1,1,0)) %>%
+    mutate(support=ifelse(mean<0,1-support,support)) %>%
+    left_join(genome_metadata, by = join_by(genome == genome)) %>%
+    mutate(phylum = ifelse(support > 0.9, phylum, NA)) %>%
+    ggplot(aes(x=mean,y=support,color=phylum))+
+      geom_point(alpha=0.7, shape=16, size=3)+
+      scale_color_manual(values = phylum_colors) +
+      geom_vline(xintercept = 0) +
+      xlim(c(-0.4,0.4)) +
+      labs(x = "Beta regression coefficient", y = "Posterior probability") +
+      theme_minimal()+
+       theme(legend.position = "none")
+```
+
+
+#### Correlations
+
+```{r hmsc_correlations, warning=FALSE, comments="", message=FALSE}
+#Compute the residual correlation matrix
+OmegaCor = computeAssociations(m)
+
+# Refernece tree (for sorting genomes)
+genome_tree_subset <- genome_tree %>%
+        keep.tip(., tip=m$spNames) 
+
+
+#Co-occurrence matrix at the animal level
+supportLevel = 0.95
+toPlot = ((OmegaCor[[1]]$support>supportLevel)
+          + (OmegaCor[[1]]$support<(1-supportLevel))>0)*OmegaCor[[1]]$mean
+
+matrix <- toPlot %>% 
+      as.data.frame() %>%
+      rownames_to_column(var="genome1") %>%
+      pivot_longer(!genome1, names_to = "genome2", values_to = "cor") %>%
+      mutate(genome1= factor(genome1, levels=genome_tree_subset$tip.label)) %>%
+      mutate(genome2= factor(genome2, levels=genome_tree_subset$tip.label)) %>%
+      ggplot(aes(x = genome1, y = genome2, fill = cor)) +
+            geom_tile() + 
+            scale_fill_gradient2(low = "#be3e2b",
+                       mid = "#f4f4f4",
+                       high = "#b2b530")+
+            theme_void()
+
+htree <- genome_tree_subset %>%
+  force.ultrametric(.,method="extend") %>%
+  ggtree(.)
+
+vtree <- genome_tree_subset %>%
+  force.ultrametric(.,method="extend") %>%
+  ggtree(.)
+  
+#create composite figure
+grid.arrange(grobs = list(matrix,vtree),
+             layout_matrix = rbind(c(2,1,1,1,1,1,1,1,1,1,1,1),
+                                   c(2,1,1,1,1,1,1,1,1,1,1,1),
+                                   c(2,1,1,1,1,1,1,1,1,1,1,1),
+                                   c(2,1,1,1,1,1,1,1,1,1,1,1),
+                                   c(2,1,1,1,1,1,1,1,1,1,1,1),
+                                   c(2,1,1,1,1,1,1,1,1,1,1,1),
+                                   c(2,1,1,1,1,1,1,1,1,1,1,1),
+                                   c(2,1,1,1,1,1,1,1,1,1,1,1),
+                                   c(2,1,1,1,1,1,1,1,1,1,1,1),
+                                   c(2,1,1,1,1,1,1,1,1,1,1,1),
+                                   c(2,1,1,1,1,1,1,1,1,1,1,1)))
+```
+
+#### Predict responses (origin)
+
+```{r hmsc_predictions, warning=FALSE, comments="", message=FALSE}
+
+# Select modelchain of interest
+load("hmsc/fit_model1_250_10.Rdata")
+
+gradient = c("domestic","feral")
+gradientlength = length(gradient)
+
+#Treatment-specific gradient predictions
+pred <- constructGradient(m, 
+                      focalVariable = "origin", 
+                      non.focalVariables = list(logseqdepth=list(1),location=list(1))) %>%
+            predict(m, Gradient = ., expected = TRUE) %>%
+            do.call(rbind,.) %>%
+            as.data.frame() %>%
+            mutate(origin=rep(gradient,1000)) %>%
+            pivot_longer(!origin,names_to = "genome", values_to = "value")
+```
+
+
+#### Element level
+
+```{r hmsc_origin_element, warning=FALSE, comments="", message=FALSE}
+elements_table <- genome_gifts %>%
+    to.elements(., GIFT_db) %>%
+    as.data.frame()
+
+community_elements <- pred %>%
+  group_by(origin, genome) %>%
+  mutate(row_id = row_number()) %>%
+  pivot_wider(names_from = genome, values_from = value) %>%
+  ungroup() %>%
+  group_split(row_id) %>%
+  as.list() %>%
+  lapply(., FUN = function(x){x %>%
+    dplyr::select(-row_id) %>%
+    column_to_rownames(var = "origin") %>%
+    as.data.frame() %>%
+    exp() %>%
+    t() %>%
+    tss() %>%
+    to.community(elements_table,.,GIFT_db) %>% 
+    as.data.frame() %>%
+    rownames_to_column(var="origin")
+   })
+
+calculate_slope <- function(x) {
+  lm_fit <- lm(unlist(x) ~ seq_along(unlist(x)))
+  coef(lm_fit)[2]
+}
+
+element_predictions <- map_dfc(community_elements, function(mat) {
+      mat %>%
+        column_to_rownames(var = "origin") %>%
+        t() %>%
+        as.data.frame() %>%
+        rowwise() %>%
+        mutate(slope = calculate_slope(c_across(everything()))) %>%
+        dplyr::select(slope) }) %>%
+      t() %>%
+      as.data.frame() %>%
+      set_names(colnames(community_elements[[1]])[-1]) %>%
+      rownames_to_column(var="iteration") %>%
+      pivot_longer(!iteration, names_to="trait",values_to="value") %>%
+      group_by(trait) %>%
+      summarise(mean=mean(value),
+        p1 = quantile(value, probs = 0.1),
+        p9 = quantile(value, probs = 0.9),
+        positive_support = sum(value > 0)/1000,
+        negative_support = sum(value < 0)/1000) %>%
+      arrange(-positive_support)
+```
+##### Positive associated functions at element level
+
+```{r hmsc_origin_element_significant, warning=FALSE, comments="", message=FALSE}
+# Positively associated
+
+unique_funct_db<- GIFT_db[c(2,4,5,6)] %>% 
+  distinct(Code_element, .keep_all = TRUE)
+
+
+element_predictions %>%
+  filter(mean >0) %>%
+  arrange(-positive_support) %>%
+  filter(positive_support>=0.9) %>%
+  left_join(unique_funct_db, by = join_by(trait == Code_element))%>%
+  arrange(Domain,Function)%>%
+  paged_table()
+
+```
+
+```{r community_weighed_pos, warning=FALSE, comments="", message=FALSE}
+#Get community-weighed average GIFTs per sample
+genome_counts_row <- genome_counts %>%
+  mutate_at(vars(-genome),~./sum(.)) %>% 
+  column_to_rownames(., "genome") 
+#genome_counts_row <- rownames_to_column(genome_counts_row, "genome")
+GIFTs_elements_community <- to.community(elements_table,genome_counts_row,GIFT_db)
+
+element_gift_t <- GIFTs_elements_community  %>% 
+  t() %>%
+#  row_to_names(row_number = 1) %>%
+  as.data.frame() %>%
+  mutate_if(is.character, as.numeric)  %>%
+  rownames_to_column(., "trait")
+
+significant_elements<- element_predictions %>%
+  filter(mean >0) %>%
+  arrange(-positive_support) %>%
+  filter(positive_support>=0.9)
+
+element_gift_filt <- subset(element_gift_t, trait %in% significant_elements$trait) %>% 
+  t() %>%
+  row_to_names(row_number = 1) %>%
+  as.data.frame() %>%
+  mutate_if(is.character, as.numeric)  %>%
+  rownames_to_column(., "sample")%>% 
+  left_join(., sample_metadata[c(4,9)], by = join_by(sample == sample))
+
+uniqueGIFT_db<- unique(GIFT_db[c(2,4,5,6)]) %>% unite("Function",Function:Element, sep= "_", remove=FALSE)
+
+element_gift_filt %>%
+  select(-sample)%>%
+  group_by(Origin)  %>%
+  summarise(across(everything(), mean))%>%
+   t() %>%
+  row_to_names(row_number = 1) %>%
+  as.data.frame() %>%
+  mutate_if(is.character, as.numeric)  %>%
+  rownames_to_column(., "Elements")  %>%
+  left_join(.,uniqueGIFT_db[c(1,3)],by = join_by(Elements == Code_element))
+```
+```{r elements_post_plot, comment="", echo=FALSE, message=FALSE, warning=FALSE}
+element_gift_names <- element_gift_filt%>%
+  select(-Origin)%>%
+   t() %>%
+  row_to_names(row_number = 1) %>%
+  as.data.frame() %>%
+  mutate_if(is.character, as.numeric)  %>%
+  rownames_to_column(., "Elements")  %>%
+  left_join(.,uniqueGIFT_db[c(1,3)],by = join_by(Elements == Code_element))%>%
+  select(-Elements)%>%
+  select(Function, everything())%>%
+   t()%>%
+  row_to_names(row_number = 1) %>%
+  as.data.frame() %>%
+  mutate_if(is.character, as.numeric)  %>%
+  rownames_to_column(., "sample")%>% 
+  left_join(., sample_metadata[c(4,9)], by = join_by(sample == sample))
+
+
+element_gift_names$Origin <- factor(element_gift_names$Origin, levels=c("Tame", "Feral"))
+colNames <- names(element_gift_names)[2:6]
+for(i in colNames){
+  plt <- ggplot(element_gift_names, aes(x=Origin, y=.data[[i]], color = Origin, fill=Origin)) +
+    geom_boxplot(alpha = 0.2, outlier.shape = NA, width = 0.3, show.legend = FALSE) +
+    geom_jitter(width = 0.1, show.legend = TRUE) +
+    scale_color_manual(values=c("#6A9AC3","#F3B942")) +
+    scale_fill_manual(values=c("#6A9AC3","#F3B942"))+
+    theme_minimal() +
+    theme(
+      axis.line = element_line(size = 0.5, linetype = "solid", colour = "black"),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.border = element_blank())
+  print(plt)
+}
+```
+
+
+##### Negatively associated functions at element level
+
+```{r hmsc_origin_element_significant_neg, warning=FALSE, comments="", message=FALSE}
+element_predictions %>%
+  filter(mean <0) %>%
+  arrange(-negative_support) %>%
+  filter(negative_support>=0.9) %>%
+  left_join(unique_funct_db, by = join_by(trait == Code_element))%>%
+  arrange(Domain,Function)%>%
+  paged_table()
+```
+
+```{r community_weighed_neg, warning=FALSE, comments="", message=FALSE}
+element_gift_t <- GIFTs_elements_community  %>% 
+  t() %>%
+#  row_to_names(row_number = 1) %>%
+  as.data.frame() %>%
+  mutate_if(is.character, as.numeric)  %>%
+  rownames_to_column(., "trait")
+
+significant_elements<- element_predictions %>%
+  filter(mean <0) %>%
+  arrange(-negative_support) %>%
+  filter(negative_support>=0.9) 
+
+element_gift_filt <- subset(element_gift_t, trait %in% significant_elements$trait) %>% 
+  t() %>%
+  row_to_names(row_number = 1) %>%
+  as.data.frame() %>%
+  mutate_if(is.character, as.numeric)  %>%
+  rownames_to_column(., "sample")%>% 
+  left_join(., sample_metadata[c(4,9)], by = join_by(sample == sample))
+
+uniqueGIFT_db<- unique(GIFT_db[c(2,4,5,6)]) %>% unite("Function",Function:Element, sep= "_", remove=FALSE)
+
+element_gift_filt %>%
+  select(-sample)%>%
+  group_by(Origin)  %>%
+  summarise(across(everything(), mean))%>%
+   t() %>%
+  row_to_names(row_number = 1) %>%
+  as.data.frame() %>%
+  mutate_if(is.character, as.numeric)  %>%
+  rownames_to_column(., "Elements")  %>%
+  left_join(.,uniqueGIFT_db[c(1,3)],by = join_by(Elements == Code_element))
+```
+```{r elements_neg_plot, comment="", echo=FALSE, message=FALSE, warning=FALSE}
+element_gift_names <- element_gift_filt%>%
+  select(-Origin)%>%
+   t() %>%
+  row_to_names(row_number = 1) %>%
+  as.data.frame() %>%
+  mutate_if(is.character, as.numeric)  %>%
+  rownames_to_column(., "Elements")  %>%
+  left_join(.,uniqueGIFT_db[c(1,3)],by = join_by(Elements == Code_element))%>%
+  select(-Elements)%>%
+  select(Function, everything())%>%
+   t()%>%
+  row_to_names(row_number = 1) %>%
+  as.data.frame() %>%
+  mutate_if(is.character, as.numeric)  %>%
+  rownames_to_column(., "sample")%>% 
+  left_join(., sample_metadata[c(4,9)], by = join_by(sample == sample))
+
+element_gift_names$Origin <- factor(element_gift_names$Origin, levels=c("Tame", "Feral"))
+colNames <- names(element_gift_names)[2:28]
+for(i in colNames){
+  plt <- ggplot(element_gift_names, aes(x=Origin, y=.data[[i]], color = Origin, fill=Origin)) +
+    geom_boxplot(alpha = 0.2, outlier.shape = NA, width = 0.3, show.legend = FALSE) +
+    geom_jitter(width = 0.1, show.legend = TRUE) +
+    scale_color_manual(values=c("#6A9AC3","#F3B942")) +
+    scale_fill_manual(values=c("#6A9AC3","#F3B942"))+
+    theme_minimal() +
+    theme(
+      axis.line = element_line(size = 0.5, linetype = "solid", colour = "black"),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.border = element_blank())
+  print(plt)
+}
+```
+```{r hmsc_origin_significant_plot, warning=FALSE, comments="", message=FALSE}
+
+positive <- element_predictions %>%
+  filter(mean >0) %>%
+  arrange(mean) %>%
+  filter(positive_support>=0.9) %>%
+  dplyr::select(-negative_support) %>%
+  rename(support=positive_support)
+
+negative <- element_predictions %>%
+  filter(mean <0) %>%
+  arrange(mean) %>%
+  filter(negative_support>=0.9) %>%
+  dplyr::select(-positive_support) %>%
+  rename(support=negative_support)
+
+bind_rows(positive,negative) %>%
+  left_join(GIFT_db,by=join_by(trait==Code_element)) %>%
+  mutate(trait=factor(trait,levels=c(rev(positive$trait),rev(negative$trait)))) %>%
+  ggplot(aes(x=mean, y=fct_rev(trait), xmin=p1, xmax=p9, color=Function)) +
+      geom_point() +
+      geom_errorbar() +
+      xlim(c(-0.04,0.04)) +
+      geom_vline(xintercept=0) +
+      scale_color_manual(values = c("#debc14","#440526","#dc7c17","#172742","#debc14","#440526","#dc7c17","#172742","#357379","#6c7e2c","#d8dc69","#774d35","#db717d")) +
+      theme_minimal() +
+      labs(x="Regression coefficient",y="Functional trait")
+```
+
+```{r hmsc_origin_significant_plot1, warning=FALSE, comments="", message=FALSE}
+table <- bind_rows(positive,negative) %>%
+  left_join(unique_funct_db,by=join_by(trait==Code_element)) %>%
+  mutate(trait=factor(trait,levels=c(rev(positive$trait),rev(negative$trait)))) 
+
+table %>%
+  mutate(Element=factor(Element,levels=c(table$Element))) %>%
+  ggplot(aes(x=mean, y=fct_rev(Element), xmin=p1, xmax=p9, color=Function)) +
+      geom_point() +
+      geom_errorbar() +
+      xlim(c(-0.04,0.04)) +
+      geom_vline(xintercept=0) +
+      scale_color_manual(values = c("#debc14","#440526","#dc7c17","#172742","#debc14","#440526","#dc7c17","#172742","#357379","#6c7e2c","#d8dc69","#774d35","#db717d")) +
+      theme_minimal() +
+      labs(x="Regression coefficient",y="Functional trait")
+```
+
+
+#### Function level
+
+```{r hmsc_origin_function_predictions, warning=FALSE, comments="", message=FALSE}
+functions_table <- elements_table %>%
+    to.functions(., GIFT_db) %>%
+    as.data.frame()
+
+community_functions <- pred %>%
+  group_by(origin, genome) %>%
+  mutate(row_id = row_number()) %>%
+  pivot_wider(names_from = genome, values_from = value) %>%
+  ungroup() %>%
+  group_split(row_id) %>%
+  as.list() %>%
+  lapply(., FUN = function(x){x %>%
+    dplyr::select(-row_id) %>%
+    column_to_rownames(var = "origin") %>%
+    as.data.frame() %>%
+    exp() %>%
+    t() %>%
+    tss() %>%
+    to.community(functions_table,.,GIFT_db) %>% 
+    as.data.frame() %>%
+    rownames_to_column(var="origin")
+   })
+```
+
+```{r hmsc_origin_function_predictions_model, warning=FALSE, comments="", message=FALSE}
+#max-min option
+calculate_slope <- function(x) {
+  lm_fit <- lm(unlist(x) ~ seq_along(unlist(x)))
+  coef(lm_fit)[2]
+}
+
+function_predictions <- map_dfc(community_functions, function(mat) {
+      mat %>%
+        column_to_rownames(var = "origin") %>%
+        t() %>%
+        as.data.frame() %>%
+        rowwise() %>%
+        mutate(slope = calculate_slope(c_across(everything()))) %>%
+        dplyr::select(slope) }) %>%
+      t() %>%
+      as.data.frame() %>%
+      set_names(colnames(community_functions[[1]])[-1]) %>%
+      rownames_to_column(var="iteration") %>%
+      pivot_longer(!iteration, names_to="trait",values_to="value") %>%
+      group_by(trait) %>%
+      summarise(mean=mean(value),
+        p1 = quantile(value, probs = 0.1),
+        p9 = quantile(value, probs = 0.9),
+        positive_support = sum(value > 0)/1000,
+        negative_support = sum(value < 0)/1000) %>%
+      arrange(-positive_support)
+
+# Positively associated
+function_predictions %>%
+  filter(mean >0) %>%
+  arrange(-positive_support) %>%
+  tt()
+
+# Negatively associated
+function_predictions %>%
+  filter(mean <0) %>%
+  arrange(-negative_support) %>%
+  tt()
+```
+
+
+```{r hmsc_origin_function_significant_plot, warning=FALSE, comments="", message=FALSE}
+
+positive <- function_predictions %>%
+  filter(mean >0) %>%
+  arrange(mean) %>%
+  filter(positive_support>=0.9) %>%
+  dplyr::select(-negative_support) %>%
+  rename(support=positive_support)
+
+negative <- function_predictions %>%
+  filter(mean <0) %>%
+  arrange(mean) %>%
+  filter(negative_support>=0.9) %>%
+  dplyr::select(-positive_support) %>%
+  rename(support=negative_support)
+
+bind_rows(positive,negative) %>%
+  left_join(GIFT_db,by=join_by(trait==Code_function)) %>%
+  mutate(trait=factor(trait,levels=c(rev(positive$trait),rev(negative$trait)))) %>%
+  ggplot(aes(x=mean, y=fct_rev(trait), xmin=p1, xmax=p9, color=Function)) +
+      geom_point() +
+      geom_errorbar() +
+      xlim(c(-0.02,0.02)) +
+      geom_vline(xintercept=0) +
+      scale_color_manual(values = c("#debc14","#440526","#dc7c17","#172742","#debc14","#440526","#dc7c17","#172742","#357379","#6c7e2c","#d8dc69","#774d35","#db717d")) +
+      theme_minimal() +
+      labs(x="Regression coefficient",y="Functional trait")
+```
+
+### Sex
+
+#### Negatively associated genomes with male cats
+
+```{r hmsc_positive_sex, warning=FALSE, comments="", message=FALSE}
+# Compute variance partitioning
+varpart=computeVariancePartitioning(m)
+
+varpart$vals %>%
+   as.data.frame() %>%
+   rownames_to_column(var="variable") %>%
+   pivot_longer(!variable, names_to = "genome", values_to = "value") %>%
+   mutate(variable=factor(variable, levels=rev(c("origin","sex","logseqdepth","Random: location")))) %>%
+   group_by(variable) %>%
+   summarise(mean=mean(value)*100,sd=sd(value)*100) %>%
+   tt()
+
+# Select desired support threshold
+support=0.9
+negsupport=1-support
+
+# Basal tree
+postestimates_tree <- genome_tree
+# Posterior estimate table
+post_beta <- getPostEstimate(hM=m, parName="Beta")$support %>%
+    as.data.frame() %>%
+    mutate(variable=m$covNames) %>%
+    pivot_longer(!variable, names_to = "genome", values_to = "value") %>%
+    mutate(genome=factor(genome, levels=rev(postestimates_tree$tip.label))) %>%
+    mutate(value = case_when(
+          value >= support ~ "Positive",
+          value <= negsupport ~ "Negative",
+          TRUE ~ "Neutral")) %>%
+    mutate(value=factor(value, levels=c("Positive","Neutral","Negative"))) %>%
+    pivot_wider(names_from = variable, values_from = value) %>%
+    column_to_rownames(var="genome")
+
+getPostEstimate(hM=m, parName="Beta")$support %>%
+    as.data.frame() %>%
+    mutate(variable=m$covNames) %>%
+    pivot_longer(!variable, names_to = "genome", values_to = "value") %>%
+    mutate(trend = case_when(
+          value >= support ~ "Positive",
+          value <= negsupport ~ "Negative",
+          TRUE ~ "Neutral")) %>%
+    filter(variable=="sexMale", trend=="Negative") %>%
+    arrange(-value) %>%
+    left_join(genome_metadata,by=join_by(genome==genome)) %>%
+    dplyr::select(genome,phylum,class,order,family,species,value) %>%
+    arrange(phylum, class, family)%>%
+    tt()
+```
+
+#### Estimate - support plot
+```{r hmsc_negative_sex, warning=FALSE, comments="", message=FALSE}
+estimate <- getPostEstimate(hM=m, parName="Beta")$mean %>%
+    as.data.frame() %>%
+    mutate(variable=m$covNames) %>%
+    filter(variable=="sexMale") %>%
+    pivot_longer(!variable, names_to = "genome", values_to = "mean") %>%
+    dplyr::select(genome,mean)
+
+support <- getPostEstimate(hM=m, parName="Beta")$support %>%
+    as.data.frame() %>%
+    mutate(variable=m$covNames) %>%
+    filter(variable=="sexMale") %>%
+    pivot_longer(!variable, names_to = "genome", values_to = "support") %>%
+    dplyr::select(genome,support)
+
+phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
+    mutate(phylum=str_remove_all(phylum, "p__")) %>%
+  right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
+  filter(genome %in% estimate$genome) %>%
+  arrange(match(genome, estimate$genome)) %>%
+  dplyr::select(phylum, colors) %>%
+  unique() %>%
+  arrange(phylum) %>%
+  dplyr::select(colors) %>%
+  pull()
+
+inner_join(estimate,support,by=join_by(genome==genome)) %>%
+    mutate(significance=ifelse(support >= 0.9 | support <= 0.1,1,0)) %>%
+    mutate(support=ifelse(mean<0,1-support,support)) %>%
+    left_join(genome_metadata, by = join_by(genome == genome)) %>%
+    mutate(phylum = ifelse(support > 0.9, phylum, NA)) %>%
+    ggplot(aes(x=mean,y=support,color=phylum))+
+      geom_point(alpha=0.7, shape=16, size=3)+
+      scale_color_manual(values = phylum_colors) +
+      geom_vline(xintercept = 0) +
+      xlim(c(-0.4,0.4)) +
+      labs(x = "Beta regression coefficient", y = "Posterior probability") +
+      theme_minimal()+
+       theme(legend.position = "none")
+```
+
+
+#### Predict responses
+
+```{r hmsc_predictions_sex, warning=FALSE, comments="", message=FALSE}
+
+# Select modelchain of interest
+load("hmsc/fit_model1_250_10.Rdata")
+
+gradient = c("Male","Female","Unknown")
+gradientlength = length(gradient)
+
+#Treatment-specific gradient predictions
+pred <- constructGradient(m, 
+                      focalVariable = "sex", 
+                      non.focalVariables = list(logseqdepth=list(1),location=list(1))) %>%
+            predict(m, Gradient = ., expected = TRUE) %>%
+            do.call(rbind,.) %>%
+            as.data.frame() %>%
+            mutate(sex=rep(gradient,1000)) %>%
+            pivot_longer(!sex,names_to = "genome", values_to = "value")
+```
+
+
+#### Element level
+
+```{r hmsc_sex_element, warning=FALSE, comments="", message=FALSE}
+elements_table <- genome_gifts %>%
+    to.elements(., GIFT_db) %>%
+    as.data.frame()
+
+community_elements <- pred %>%
+  group_by(sex, genome) %>%
+  mutate(row_id = row_number()) %>%
+  pivot_wider(names_from = genome, values_from = value) %>%
+  ungroup() %>%
+  group_split(row_id) %>%
+  as.list() %>%
+  lapply(., FUN = function(x){x %>%
+    dplyr::select(-row_id) %>%
+    column_to_rownames(var = "sex") %>%
+    as.data.frame() %>%
+    exp() %>%
+    t() %>%
+    tss() %>%
+    to.community(elements_table,.,GIFT_db) %>% 
+    as.data.frame() %>%
+    rownames_to_column(var="sex")
+   })
+
+calculate_slope <- function(x) {
+  lm_fit <- lm(unlist(x) ~ seq_along(unlist(x)))
+  coef(lm_fit)[2]
+}
+
+element_predictions <- map_dfc(community_elements, function(mat) {
+      mat %>%
+        column_to_rownames(var = "sex") %>%
+        t() %>%
+        as.data.frame() %>%
+        rowwise() %>%
+        mutate(slope = calculate_slope(c_across(everything()))) %>%
+        dplyr::select(slope) }) %>%
+      t() %>%
+      as.data.frame() %>%
+      set_names(colnames(community_elements[[1]])[-1]) %>%
+      rownames_to_column(var="iteration") %>%
+      pivot_longer(!iteration, names_to="trait",values_to="value") %>%
+      group_by(trait) %>%
+      summarise(mean=mean(value),
+        p1 = quantile(value, probs = 0.1),
+        p9 = quantile(value, probs = 0.9),
+        positive_support = sum(value > 0)/1000,
+        negative_support = sum(value < 0)/1000) %>%
+      arrange(-positive_support)
+```
+
+##### Positive associated functions at element level
+
+```{r hmsc_sex_element_significant, warning=FALSE, comments="", message=FALSE}
+# Positively associated
+
+unique_funct_db<- GIFT_db[c(2,4,5,6)] %>% 
+  distinct(Code_element, .keep_all = TRUE)
+
+
+element_predictions %>%
+  filter(mean >0) %>%
+  arrange(-positive_support) %>%
+  filter(positive_support>=0.9) %>%
+  left_join(unique_funct_db, by = join_by(trait == Code_element))%>%
+  arrange(Domain,Function)
+```
+
+##### Negatively associated functions at element level
+
+```{r hmsc_sex_element_significant_neg, warning=FALSE, comments="", message=FALSE}
+element_predictions %>%
+  filter(mean <0) %>%
+  arrange(-negative_support) %>%
+  filter(negative_support>=0.9) %>%
+  left_join(unique_funct_db, by = join_by(trait == Code_element))%>%
+  arrange(Domain,Function)
+```
+
+```{r hmsc_sex_significant_plot, warning=FALSE, comments="", message=FALSE}
+
+positive <- element_predictions %>%
+  filter(mean >0) %>%
+  arrange(mean) %>%
+  filter(positive_support>=0.9) %>%
+  dplyr::select(-negative_support) %>%
+  rename(support=positive_support)
+
+negative <- element_predictions %>%
+  filter(mean <0) %>%
+  arrange(mean) %>%
+  filter(negative_support>=0.9) %>%
+  dplyr::select(-positive_support) %>%
+  rename(support=negative_support)
+
+bind_rows(positive,negative) %>%
+  left_join(GIFT_db,by=join_by(trait==Code_element)) %>%
+  mutate(trait=factor(trait,levels=c(rev(positive$trait),rev(negative$trait)))) %>%
+  ggplot(aes(x=mean, y=fct_rev(trait), xmin=p1, xmax=p9, color=Function)) +
+      geom_point() +
+      geom_errorbar() +
+#      xlim(c(-0.04,0.04)) +
+      geom_vline(xintercept=0) +
+#      scale_color_manual(values = c("#debc14","#440526","#dc7c17","#172742","#debc14","#440526","#dc7c17","#172742","#357379","#6c7e2c","#d8dc69","#774d35","#db717d")) +
+      theme_minimal() +
+      labs(x="Regression coefficient",y="Functional trait")
+```
+
+#### Function level
+
+```{r hmsc_sex_function_predictions, warning=FALSE, comments="", message=FALSE}
+functions_table <- elements_table %>%
+    to.functions(., GIFT_db) %>%
+    as.data.frame()
+
+community_functions <- pred %>%
+  group_by(sex, genome) %>%
+  mutate(row_id = row_number()) %>%
+  pivot_wider(names_from = genome, values_from = value) %>%
+  ungroup() %>%
+  group_split(row_id) %>%
+  as.list() %>%
+  lapply(., FUN = function(x){x %>%
+    dplyr::select(-row_id) %>%
+    column_to_rownames(var = "sex") %>%
+    as.data.frame() %>%
+    exp() %>%
+    t() %>%
+    tss() %>%
+    to.community(functions_table,.,GIFT_db) %>% 
+    as.data.frame() %>%
+    rownames_to_column(var="sex")
+   })
+```
+
+```{r hmsc_sex_function_predictions_model, warning=FALSE, comments="", message=FALSE}
+#max-min option
+calculate_slope <- function(x) {
+  lm_fit <- lm(unlist(x) ~ seq_along(unlist(x)))
+  coef(lm_fit)[2]
+}
+
+function_predictions <- map_dfc(community_functions, function(mat) {
+      mat %>%
+        column_to_rownames(var = "sex") %>%
+        t() %>%
+        as.data.frame() %>%
+        rowwise() %>%
+        mutate(slope = calculate_slope(c_across(everything()))) %>%
+        dplyr::select(slope) }) %>%
+      t() %>%
+      as.data.frame() %>%
+      set_names(colnames(community_functions[[1]])[-1]) %>%
+      rownames_to_column(var="iteration") %>%
+      pivot_longer(!iteration, names_to="trait",values_to="value") %>%
+      group_by(trait) %>%
+      summarise(mean=mean(value),
+        p1 = quantile(value, probs = 0.1),
+        p9 = quantile(value, probs = 0.9),
+        positive_support = sum(value > 0)/1000,
+        negative_support = sum(value < 0)/1000) %>%
+      arrange(-positive_support)
+
+# Positively associated
+function_predictions %>%
+  filter(mean >0) %>%
+  arrange(-positive_support) %>%
+  tt()
+
+# Negatively associated
+function_predictions %>%
+  filter(mean <0) %>%
+  arrange(-negative_support) %>%
+  tt()
+```
+
+
+```{r hmsc_sex_function_significant_plot, warning=FALSE, comments="", message=FALSE}
+
+positive <- function_predictions %>%
+  filter(mean >0) %>%
+  arrange(mean) %>%
+  filter(positive_support>=0.9) %>%
+  dplyr::select(-negative_support) %>%
+  rename(support=positive_support)
+
+negative <- function_predictions %>%
+  filter(mean <0) %>%
+  arrange(mean) %>%
+  filter(negative_support>=0.9) %>%
+  dplyr::select(-positive_support) %>%
+  rename(support=negative_support)
+
+bind_rows(positive,negative) %>%
+  left_join(GIFT_db,by=join_by(trait==Code_function)) %>%
+  mutate(trait=factor(trait,levels=c(rev(positive$trait),rev(negative$trait)))) %>%
+  ggplot(aes(x=mean, y=fct_rev(trait), xmin=p1, xmax=p9, color=Function)) +
+      geom_point() +
+      geom_errorbar() +
+#      xlim(c(-0.02,0.02)) +
+      geom_vline(xintercept=0) +
+      scale_color_manual(values = c("#debc14","#440526","#dc7c17","#172742","#357379","#6c7e2c","#d8dc69","#774d35","#db717d")) +
+      theme_minimal() +
+      labs(x="Regression coefficient",y="Functional trait")
+```
+
+<!--chapter:end:07_hmsc_analysis.Rmd-->
+

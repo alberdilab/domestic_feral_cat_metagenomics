@@ -121,7 +121,6 @@ phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI
     column_to_rownames(var = "genome") %>%
     dplyr::select(phylum)
 
-
 colors_alphabetic <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
     mutate(phylum=str_remove_all(phylum, "p__")) %>%
     right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
