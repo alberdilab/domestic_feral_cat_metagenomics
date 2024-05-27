@@ -55,6 +55,7 @@ library(devtools)
 library(tinytable)
 library(broom)
 library(broom.mixed)
+library(rmarkdown)
 
 # For tree handling
 library(ape)
