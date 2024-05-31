@@ -364,7 +364,6 @@ element_predictions <- map_dfc(community_elements, function(mat) {
         negative_support = sum(value < 0)/1000) %>%
       arrange(-positive_support)
 ```
-
 ##### Positive associated functions at element level
 
 ```{r hmsc_origin_element_significant, warning=FALSE, comments="", message=FALSE}
@@ -528,7 +527,11 @@ element_gift_names <- element_gift_filt%>%
   left_join(., sample_metadata[c(4,9)], by = join_by(sample == sample))
 
 element_gift_names$Origin <- factor(element_gift_names$Origin, levels=c("Tame", "Feral"))
+<<<<<<< HEAD
 colNames <- names(element_gift_names)[2:26]
+=======
+colNames <- names(element_gift_names)[2:28]
+>>>>>>> 07d9ceaa25b8b3c70402bd9fb4f7adeed7a505f4
 for(i in colNames){
   plt <- ggplot(element_gift_names, aes(x=Origin, y=.data[[i]], color = Origin, fill=Origin)) +
     geom_boxplot(alpha = 0.2, outlier.shape = NA, width = 0.3, show.legend = FALSE) +
