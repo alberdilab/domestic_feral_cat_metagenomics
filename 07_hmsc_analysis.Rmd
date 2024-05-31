@@ -653,13 +653,13 @@ function_predictions <- map_dfc(community_functions, function(mat) {
 function_predictions %>%
   filter(mean >0) %>%
   arrange(-positive_support) %>%
-  tt()
+  paged_table()
 
 # Negatively associated
 function_predictions %>%
   filter(mean <0) %>%
   arrange(-negative_support) %>%
-  tt()
+  paged_table()
 ```
 
 
@@ -742,7 +742,7 @@ getPostEstimate(hM=m, parName="Beta")$support %>%
     left_join(genome_metadata,by=join_by(genome==genome)) %>%
     dplyr::select(genome,phylum,class,order,family,species,value) %>%
     arrange(phylum, class, family)%>%
-    tt()
+  paged_table()
 ```
 
 #### Estimate - support plot
@@ -979,13 +979,13 @@ function_predictions <- map_dfc(community_functions, function(mat) {
 function_predictions %>%
   filter(mean >0) %>%
   arrange(-positive_support) %>%
-  tt()
+  paged_table()
 
 # Negatively associated
 function_predictions %>%
   filter(mean <0) %>%
   arrange(-negative_support) %>%
-  tt()
+  paged_table()
 ```
 
 
