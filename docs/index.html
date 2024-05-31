@@ -24,7 +24,7 @@
 <meta name="author" content="Antton Alberdi" />
 
 
-<meta name="date" content="2024-05-27" />
+<meta name="date" content="2024-05-31" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -3403,7 +3403,7 @@ color: #a52929;
 <h2 class="subtitle"><em>Domestic-feral cat metagenomics</em></h2>
 <p class="author"><em>Ostaizka Aizpurua<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a></em></p>
 <p class="author"><em>Antton Alberdi<a href="#fn2" class="footnote-ref" id="fnref2"><sup>2</sup></a></em></p>
-<p class="date"><em>2024-05-27</em></p>
+<p class="date"><em>2024-05-31</em></p>
 </div>
 <div id="introduction" class="section level1 hasAnchor" number="1">
 <h1><span class="header-section-number">Chapter 1</span> Introduction<a href="index.html#introduction" class="anchor-section" aria-label="Anchor link to header"></a></h1>
@@ -3432,37 +3432,38 @@ color: #a52929;
 <span id="cb2-7"><a href="index.html#cb2-7" tabindex="-1"></a><span class="fu">library</span>(broom)</span>
 <span id="cb2-8"><a href="index.html#cb2-8" tabindex="-1"></a><span class="fu">library</span>(broom.mixed)</span>
 <span id="cb2-9"><a href="index.html#cb2-9" tabindex="-1"></a><span class="fu">library</span>(rmarkdown)</span>
-<span id="cb2-10"><a href="index.html#cb2-10" tabindex="-1"></a></span>
-<span id="cb2-11"><a href="index.html#cb2-11" tabindex="-1"></a><span class="co"># For tree handling</span></span>
-<span id="cb2-12"><a href="index.html#cb2-12" tabindex="-1"></a><span class="fu">library</span>(ape)</span>
-<span id="cb2-13"><a href="index.html#cb2-13" tabindex="-1"></a><span class="fu">library</span>(phyloseq)</span>
-<span id="cb2-14"><a href="index.html#cb2-14" tabindex="-1"></a><span class="fu">library</span>(phytools)</span>
-<span id="cb2-15"><a href="index.html#cb2-15" tabindex="-1"></a></span>
-<span id="cb2-16"><a href="index.html#cb2-16" tabindex="-1"></a><span class="co"># For plotting</span></span>
-<span id="cb2-17"><a href="index.html#cb2-17" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
-<span id="cb2-18"><a href="index.html#cb2-18" tabindex="-1"></a><span class="fu">library</span>(ggrepel)</span>
-<span id="cb2-19"><a href="index.html#cb2-19" tabindex="-1"></a><span class="fu">library</span>(ggpubr)</span>
-<span id="cb2-20"><a href="index.html#cb2-20" tabindex="-1"></a><span class="fu">library</span>(ggnewscale)</span>
-<span id="cb2-21"><a href="index.html#cb2-21" tabindex="-1"></a><span class="fu">library</span>(gridExtra)</span>
-<span id="cb2-22"><a href="index.html#cb2-22" tabindex="-1"></a><span class="fu">library</span>(ggtreeExtra)</span>
-<span id="cb2-23"><a href="index.html#cb2-23" tabindex="-1"></a><span class="fu">library</span>(ggtree)</span>
-<span id="cb2-24"><a href="index.html#cb2-24" tabindex="-1"></a><span class="fu">library</span>(ggh4x)</span>
-<span id="cb2-25"><a href="index.html#cb2-25" tabindex="-1"></a></span>
-<span id="cb2-26"><a href="index.html#cb2-26" tabindex="-1"></a><span class="co"># For statistics</span></span>
-<span id="cb2-27"><a href="index.html#cb2-27" tabindex="-1"></a><span class="fu">library</span>(spaa)</span>
-<span id="cb2-28"><a href="index.html#cb2-28" tabindex="-1"></a><span class="fu">library</span>(vegan)</span>
-<span id="cb2-29"><a href="index.html#cb2-29" tabindex="-1"></a><span class="fu">library</span>(Rtsne)</span>
-<span id="cb2-30"><a href="index.html#cb2-30" tabindex="-1"></a><span class="fu">library</span>(geiger)</span>
-<span id="cb2-31"><a href="index.html#cb2-31" tabindex="-1"></a><span class="fu">library</span>(ANCOMBC)</span>
-<span id="cb2-32"><a href="index.html#cb2-32" tabindex="-1"></a><span class="fu">library</span>(lme4)</span>
-<span id="cb2-33"><a href="index.html#cb2-33" tabindex="-1"></a><span class="fu">library</span>(Hmsc)</span>
-<span id="cb2-34"><a href="index.html#cb2-34" tabindex="-1"></a><span class="fu">library</span>(matrixStats)</span>
-<span id="cb2-35"><a href="index.html#cb2-35" tabindex="-1"></a><span class="fu">library</span>(MuMIn)</span>
-<span id="cb2-36"><a href="index.html#cb2-36" tabindex="-1"></a><span class="co">#library(MASS)</span></span>
-<span id="cb2-37"><a href="index.html#cb2-37" tabindex="-1"></a><span class="fu">library</span>(nlme)</span>
-<span id="cb2-38"><a href="index.html#cb2-38" tabindex="-1"></a><span class="fu">library</span>(emmeans)</span>
-<span id="cb2-39"><a href="index.html#cb2-39" tabindex="-1"></a><span class="fu">library</span>(hilldiv2)</span>
-<span id="cb2-40"><a href="index.html#cb2-40" tabindex="-1"></a><span class="fu">library</span>(distillR)</span></code></pre></div>
+<span id="cb2-10"><a href="index.html#cb2-10" tabindex="-1"></a><span class="fu">library</span>(janitor)</span>
+<span id="cb2-11"><a href="index.html#cb2-11" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="index.html#cb2-12" tabindex="-1"></a><span class="co"># For tree handling</span></span>
+<span id="cb2-13"><a href="index.html#cb2-13" tabindex="-1"></a><span class="fu">library</span>(ape)</span>
+<span id="cb2-14"><a href="index.html#cb2-14" tabindex="-1"></a><span class="fu">library</span>(phyloseq)</span>
+<span id="cb2-15"><a href="index.html#cb2-15" tabindex="-1"></a><span class="fu">library</span>(phytools)</span>
+<span id="cb2-16"><a href="index.html#cb2-16" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="index.html#cb2-17" tabindex="-1"></a><span class="co"># For plotting</span></span>
+<span id="cb2-18"><a href="index.html#cb2-18" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb2-19"><a href="index.html#cb2-19" tabindex="-1"></a><span class="fu">library</span>(ggrepel)</span>
+<span id="cb2-20"><a href="index.html#cb2-20" tabindex="-1"></a><span class="fu">library</span>(ggpubr)</span>
+<span id="cb2-21"><a href="index.html#cb2-21" tabindex="-1"></a><span class="fu">library</span>(ggnewscale)</span>
+<span id="cb2-22"><a href="index.html#cb2-22" tabindex="-1"></a><span class="fu">library</span>(gridExtra)</span>
+<span id="cb2-23"><a href="index.html#cb2-23" tabindex="-1"></a><span class="fu">library</span>(ggtreeExtra)</span>
+<span id="cb2-24"><a href="index.html#cb2-24" tabindex="-1"></a><span class="fu">library</span>(ggtree)</span>
+<span id="cb2-25"><a href="index.html#cb2-25" tabindex="-1"></a><span class="fu">library</span>(ggh4x)</span>
+<span id="cb2-26"><a href="index.html#cb2-26" tabindex="-1"></a></span>
+<span id="cb2-27"><a href="index.html#cb2-27" tabindex="-1"></a><span class="co"># For statistics</span></span>
+<span id="cb2-28"><a href="index.html#cb2-28" tabindex="-1"></a><span class="fu">library</span>(spaa)</span>
+<span id="cb2-29"><a href="index.html#cb2-29" tabindex="-1"></a><span class="fu">library</span>(vegan)</span>
+<span id="cb2-30"><a href="index.html#cb2-30" tabindex="-1"></a><span class="fu">library</span>(Rtsne)</span>
+<span id="cb2-31"><a href="index.html#cb2-31" tabindex="-1"></a><span class="fu">library</span>(geiger)</span>
+<span id="cb2-32"><a href="index.html#cb2-32" tabindex="-1"></a><span class="fu">library</span>(ANCOMBC)</span>
+<span id="cb2-33"><a href="index.html#cb2-33" tabindex="-1"></a><span class="fu">library</span>(lme4)</span>
+<span id="cb2-34"><a href="index.html#cb2-34" tabindex="-1"></a><span class="fu">library</span>(Hmsc)</span>
+<span id="cb2-35"><a href="index.html#cb2-35" tabindex="-1"></a><span class="fu">library</span>(matrixStats)</span>
+<span id="cb2-36"><a href="index.html#cb2-36" tabindex="-1"></a><span class="fu">library</span>(MuMIn)</span>
+<span id="cb2-37"><a href="index.html#cb2-37" tabindex="-1"></a><span class="co">#library(MASS)</span></span>
+<span id="cb2-38"><a href="index.html#cb2-38" tabindex="-1"></a><span class="fu">library</span>(nlme)</span>
+<span id="cb2-39"><a href="index.html#cb2-39" tabindex="-1"></a><span class="fu">library</span>(emmeans)</span>
+<span id="cb2-40"><a href="index.html#cb2-40" tabindex="-1"></a><span class="fu">library</span>(hilldiv2)</span>
+<span id="cb2-41"><a href="index.html#cb2-41" tabindex="-1"></a><span class="fu">library</span>(distillR)</span></code></pre></div>
 
 </div>
 </div>

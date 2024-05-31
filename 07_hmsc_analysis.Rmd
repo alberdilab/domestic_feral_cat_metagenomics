@@ -36,7 +36,7 @@ varpart_table <- varpart$vals %>%
    mutate(genome=factor(genome, levels=rev(varpart_tree$tip.label))) %>%
    mutate(variable=factor(variable, levels=rev(c("origin","sex","logseqdepth","Random: location"))))
 
-#Phylums
+#Phyla
 phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
     mutate(phylum=str_remove_all(phylum, "p__"))%>%
   right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
@@ -528,7 +528,7 @@ element_gift_names <- element_gift_filt%>%
   left_join(., sample_metadata[c(4,9)], by = join_by(sample == sample))
 
 element_gift_names$Origin <- factor(element_gift_names$Origin, levels=c("Tame", "Feral"))
-colNames <- names(element_gift_names)[2:28]
+colNames <- names(element_gift_names)[2:26]
 for(i in colNames){
   plt <- ggplot(element_gift_names, aes(x=Origin, y=.data[[i]], color = Origin, fill=Origin)) +
     geom_boxplot(alpha = 0.2, outlier.shape = NA, width = 0.3, show.legend = FALSE) +
