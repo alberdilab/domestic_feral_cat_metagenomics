@@ -364,6 +364,7 @@ element_predictions <- map_dfc(community_elements, function(mat) {
         negative_support = sum(value < 0)/1000) %>%
       arrange(-positive_support)
 ```
+
 ##### Positive associated functions at element level
 
 ```{r hmsc_origin_element_significant, warning=FALSE, comments="", message=FALSE}
