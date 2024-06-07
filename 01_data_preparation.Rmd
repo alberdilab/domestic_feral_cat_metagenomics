@@ -9,6 +9,11 @@ Load the original data files outputted by the bioinformatic pipeline.
 ```{r load_sample_metadata, warning=FALSE, comments="", message=FALSE}
 sample_metadata <- read_csv("data/sample_metadata.csv") %>%
     rename(sample=CombinedID)
+#    %>%rename(Origin=Condition)%>%
+#    rename(F.M=Sex)
+
+sample_metadata$Condition = recode(sample_metadata$Origin,
+                 Tame = "Domestic")
 ```
 
 ### Read counts
@@ -17,6 +22,7 @@ sample_metadata <- read_csv("data/sample_metadata.csv") %>%
 read_counts <- read_tsv("data/read_counts.tsv") %>%
     rename(genome=1) %>%
     dplyr::select(c("genome",sample_metadata$sample))
+genomes<-read_counts$genome
 ```
 
 ### Genome coverage
@@ -24,7 +30,8 @@ read_counts <- read_tsv("data/read_counts.tsv") %>%
 ```{r load_genome_hits, warning=FALSE, comments="", message=FALSE}
 genome_coverage <- read_tsv("data/genome_coverage.tsv") %>%
     rename(genome=1) %>%
-    dplyr::select(c("genome",sample_metadata$sample))
+    dplyr::select(c("genome",sample_metadata$sample))%>%
+  arrange(match(genome, genomes))
 ```
 
 ### Genome metadata
@@ -37,7 +44,8 @@ genome_metadata <- read_csv("data/genome_metadata.csv") %>%
         phylum == "Firmicutes_A" ~ "Bacillota_A",
         phylum == "Firmicutes_C" ~ "Bacillota_C",
         phylum == "Proteobacteria" ~ "Pseudomonadota",
-        TRUE ~ phylum))
+        TRUE ~ phylum))%>%
+  arrange(match(genome, genomes))
 ```
 
 ### Genome tree
@@ -74,6 +82,8 @@ read_counts_filt <- genome_coverage %>%
 readlength=150
 genome_counts <- read_counts %>%
   mutate(across(where(is.numeric), ~ . / (genome_metadata$length / readlength) ))
+
+#read_counts %>% select(-genome)%>% colSums()%>%as.data.frame() %>% rename(depth=".") %>% colSums()
 ```
 
 ```{r calculate_genome_counts_filtered, warning=FALSE, comments="", message=FALSE}
@@ -139,5 +149,5 @@ save(sample_metadata,
      phylum_colors,
      physeq_genome,
      physeq_genome_clr,
-     file = "data/data.Rdata")
+     file = "data/data_arrange.Rdata")
 ```

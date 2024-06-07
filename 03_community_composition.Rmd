@@ -1,7 +1,7 @@
 # Community composition
 
 ```{r load_data_community}
-load("data/data.Rdata")
+load("data/data1.Rdata")
 ```
 
 ## Taxonomy overview 
@@ -120,6 +120,20 @@ phylum_summary %>%
         theme(legend.position="none") +
         labs(y="Phylum",x="Relative abundance")
 ```
+### Phylum percentages all
+
+```{r phylum_all, comment="", echo=FALSE}
+physeq_all.phylum <- microbiome::aggregate_taxa(physeq_genome, 'phylum')
+physeq_all.phylum.rel <-  microbiome::transform(physeq_all.phylum, "compositional")
+all.rel <- physeq_all.phylum.rel@otu_table*100
+means.all.rel <- as.data.frame(rowMeans(all.rel))
+sd.all.rel <- as.data.frame(rowSds(all.rel, useNames = TRUE))
+summary.phylum.all <- merge(means.all.rel, sd.all.rel, by="row.names")
+colnames(summary.phylum.all) <- c("Phylum","mean", "sd")
+summary.phylum.all%>%
+  arrange(-mean)%>%
+  tt()
+```
 
 ### Phylum percentages by behaviour
 
@@ -151,6 +165,36 @@ sd.tame.rel <- as.data.frame(rowSds(tame.rel, useNames = TRUE))
 summary.phylum.tame <- merge(means.tame.rel, sd.tame.rel, by="row.names")
 colnames(summary.phylum.tame) <- c("Phylum","mean", "sd")
 summary.phylum.tame%>%
+  arrange(-mean)%>%
+  tt()
+```
+
+### Family percentages all
+
+```{r family_all, comment="", echo=FALSE}
+physeq_all.family <- microbiome::aggregate_taxa(physeq_genome, 'family')
+physeq_all.family.rel <-  microbiome::transform(physeq_all.family, "compositional")
+all.rel <- physeq_all.family.rel@otu_table*100
+means.all.rel <- as.data.frame(rowMeans(all.rel))
+sd.all.rel <- as.data.frame(rowSds(all.rel, useNames = TRUE))
+summary.family.all <- merge(means.all.rel, sd.all.rel, by="row.names")
+colnames(summary.family.all) <- c("family","mean", "sd")
+summary.family.all%>%
+  arrange(-mean)%>%
+  tt()
+```
+
+### Genera percentages all
+
+```{r genus_all, comment="", echo=FALSE}
+physeq_all.genus <- microbiome::aggregate_taxa(physeq_genome, 'genus')
+physeq_all.genus.rel <-  microbiome::transform(physeq_all.genus, "compositional")
+all.rel <- physeq_all.genus.rel@otu_table*100
+means.all.rel <- as.data.frame(rowMeans(all.rel))
+sd.all.rel <- as.data.frame(rowSds(all.rel, useNames = TRUE))
+summary.genus.all <- merge(means.all.rel, sd.all.rel, by="row.names")
+colnames(summary.genus.all) <- c("genus","mean", "sd")
+summary.genus.all%>%
   arrange(-mean)%>%
   tt()
 ```
@@ -198,6 +242,7 @@ family_summary %>%
         labs(y="Family", x="Relative abundance", color="Phylum")
 
 # Per location
+#pdf("figures/family_location.pdf",width=10, height=5)
 family_summary %>%
   left_join(genome_metadata %>% dplyr::select(family,phylum) %>% unique(),by=join_by(family==family)) %>%
   left_join(sample_metadata,by=join_by(sample==sample)) %>%
@@ -213,14 +258,14 @@ family_summary %>%
   theme_minimal() +
   theme(legend.position="none",
               strip.text.x = element_text(size = 14, color="black",face="bold"),
-              axis.text.x = element_text(vjust = 0.5, size = 10),
+              axis.text.x = element_text(vjust = 0.5, size = 6),
               axis.text.y = element_text(size = 12),
               axis.line = element_line(size = 0.5, linetype = "solid", colour = "black"),
               axis.title = element_text(size = 14, face = "bold"),
               axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
               axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)))+
   labs(y="Family", x="Relative abundance", color="Phylum")
-
+#dev.off()
 ```
 
 ### Genus
@@ -256,16 +301,62 @@ genus_arrange <- genus_summary %>%
     pull()
 
 #Per day
+#pdf("figures/genera_location.pdf",width=10, height=5)
 genus_summary %>%
     left_join(sample_metadata,by=join_by(sample==sample)) %>%
     mutate(genus=factor(genus, levels=rev(genus_summary_sort %>% pull(genus)))) %>%
     filter(relabun > 0) %>%
-    ggplot(aes(x=relabun, y=genus, group=genus, color=phylum)) +
-        scale_color_manual(values=phylum_colors) +
-        geom_jitter(alpha=0.5) + 
-        facet_grid(.~Origin)+
-        theme_minimal() + 
-        labs(y="Family", x="Relative abundance", color="Phylum")
-
+    ggplot(aes(x=relabun, y=genus, group=genus, color=phylum))  +
+  scale_color_manual(values=phylum_colors) +
+  scale_fill_manual(values=phylum_colors) +
+  geom_boxplot(alpha=0.2)+
+  geom_jitter(alpha=0.5) + 
+  facet_grid(.~Location)+
+  theme_minimal() +
+  theme(legend.position="none",
+              strip.text.x = element_text(size = 14, color="black",face="bold"),
+              axis.text.x = element_text(vjust = 0.5, size = 6),
+              axis.text.y = element_text(size = 12),
+              axis.line = element_line(size = 0.5, linetype = "solid", colour = "black"),
+              axis.title = element_text(size = 14, face = "bold"),
+              axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
+              axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)))+
+  labs(y="Genera", x="Relative abundance", color="Phylum")
+#dev.off()
 ```
 
+```{r physeq_plotF, comment="", echo=FALSE, message=FALSE, warning=FALSE}
+top_genera<- aggregate_top_taxa2(physeq_genome, top = 14, "genus")
+physeq_gen.rel <-  microbiome::transform(top_genera, "compositional")
+dat.dataframe.top_genera = psmelt(physeq_gen.rel)
+
+#order_colors <- c("#cccccc","#D10908","#08D5D5", "#086372", "#E06708","#E2E308", "#E09F08","#08ACAC","#086C98","#08B86B")
+colourCount = length(unique(dat.dataframe.top_genera$OTU))
+getPalette = colorRampPalette(brewer.pal(14, "Accent"))
+
+dat.dataframe.top_genera$Treatment <- factor(dat.dataframe.top_genera$Treatment, levels = c("Neg_C", "Pos_C", "Pro_d1","Pro_d2"), 
+                  labels = c("Control", "Antibiotic", "Probiotic 0-10d","Probiotic 0-35d"))
+
+dat.dataframe.top_genera$Day <- factor(dat.dataframe.top_genera$Day, levels = c("7", "21"), 
+                  labels = c("Day 7", "Day 21"))
+
+#pdf("figures/genera_top15.pdf",width=14, height=9)
+ggplot(dat.dataframe.top_genera, aes(x=Sample,y=Abundance,fill=OTU))+ 
+  scale_fill_manual(values = getPalette(colourCount))+
+  geom_bar(stat="identity") +
+  facet_grid(~Location, scale="free", space = "free")+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        strip.text.x = element_text(size = 10, face = "bold"),
+        strip.background=element_rect(color="black", fill=NA, linetype = "solid"),
+        axis.title=element_text(size=14,face="bold"),
+        panel.background = element_rect(fill = NA, color = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(linewidth = 0.5, linetype = "solid", colour = "black"),
+        legend.title = element_text(size=14,face = "bold"),
+        legend.text = element_text(size=10),
+        legend.key.size = unit(0.5, 'cm'))+ 
+  labs(x=NULL,y = "Relative abundance",fill = "Genera")
+#dev.off()
+```

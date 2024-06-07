@@ -3,7 +3,7 @@
 ## Load data
 
 ```{r load_data_hmsc_analysis}
-load("data/data.Rdata")
+load("data/data1.Rdata")
 load("hmsc/fit_model1_250_10.Rdata")
 ```
 
@@ -193,6 +193,7 @@ getPostEstimate(hM=m, parName="Beta")$support %>%
     dplyr::select(genome,phylum,class,order,family,species,value) %>%
     arrange(phylum,class,family,species)%>%
   paged_table()
+
 ```
 
 #### Estimate - support plot
@@ -290,6 +291,83 @@ grid.arrange(grobs = list(matrix,vtree),
                                    c(2,1,1,1,1,1,1,1,1,1,1,1)))
 ```
 
+
+
+```{r}
+# Overall species prediction
+pred_species <- constructGradient(m, 
+                      focalVariable = "origin", 
+                      non.focalVariables = 1, 
+                      ngrid=gradientlength) %>%
+             predict(m, Gradient = ., expected = TRUE) %>%
+             as.data.frame() %>%
+             mutate(origin=c("domestic","feral")) %>%
+             pivot_longer(!origin, names_to = "genome", values_to = "value") %>%
+             mutate(genome = sub("(.*\\..*\\.)[^.]+.*", "\\1", genome)) %>% #remove iteration suffix
+             mutate(genome =  sub("\\.$", "", genome))
+```
+```{r}
+phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
+    mutate(phylum=str_remove_all(phylum, "p__")) %>%
+    right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
+    filter(genome %in% genome_tree$tip.label) %>%
+    arrange(match(genome, genome_tree$tip.label)) %>%
+    mutate(phylum = factor(phylum, levels = unique(phylum))) %>%
+    column_to_rownames(var = "genome") %>%
+    dplyr::select(phylum)
+
+colors_alphabetic <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
+    mutate(phylum=str_remove_all(phylum, "p__")) %>%
+    right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
+    filter(genome %in% genome_tree$tip.label) %>%
+    arrange(match(genome, genome_tree$tip.label)) %>%
+     dplyr::select(phylum, colors) %>%
+    unique() %>%
+    arrange(phylum) %>%
+    dplyr::select(colors) %>%
+    pull()
+pred_species %>%
+      pivot_wider(names_from = origin, values_from = value) %>%
+      unnest(c(`domestic`, `feral`)) %>%
+      mutate(diff_grey.red = `domestic` - `feral`) %>%
+      select(genome, diff_grey.red) %>%
+      left_join(genome_metadata, by=join_by(genome==genome)) %>%
+      mutate(genome= factor(genome, levels=genome_tree$tip.label)) %>%
+      ggplot(., aes(y=genome, x=diff_grey.red, fill=phylum, color=phylum)) +
+            geom_boxplot(outlier.shape = NA) +
+          scale_color_manual(values=colors_alphabetic)+
+            scale_fill_manual(values=colors_alphabetic)+
+          geom_vline(xintercept = 0)+
+          theme_classic() +
+          theme(axis.text.y = element_blank())
+
+
+```
+```{r ancombc_rand_plot, comment="", echo=FALSE, message=FALSE, warning=FALSE, fig.height=8, fig.width=10, fig.fullwidth=TRUE}
+
+pred_species %>%
+      pivot_wider(names_from = origin, values_from = value) %>%
+      unnest(c(`domestic`, `feral`)) %>%
+      mutate(diff_grey.red = `domestic` - `feral`) %>%
+      select(genome, diff_grey.red) %>%
+      left_join(genome_metadata, by=join_by(genome==genome)) %>%
+      mutate(genome= factor(genome, levels=genome_tree$tip.label)) %>% 
+ggplot(aes(x=forcats::fct_rev(genome), y=diff_grey.red, color=phylum)) + 
+  geom_point(size=4) + 
+#  scale_color_manual(values=tax_color) + 
+  geom_hline(yintercept=0) + 
+  coord_flip()+
+  theme(axis.text = element_text(size = 10, face="bold.italic"),
+        axis.title = element_text(size = 12),
+        legend.position = "right", 
+        legend.title = element_blank(),
+        panel.background = element_blank(),
+          panel.grid.major = element_line(size = 0.15, linetype = 'solid',
+                                colour = "grey"))+
+  xlab("Genus") + 
+  ylab("log2FoldChange")+
+  guides(col=guide_legend("Phylum"))
+```
 #### Predict responses (origin)
 
 ```{r hmsc_predictions, warning=FALSE, comments="", message=FALSE}
@@ -364,6 +442,7 @@ element_predictions <- map_dfc(community_elements, function(mat) {
         negative_support = sum(value < 0)/1000) %>%
       arrange(-positive_support)
 ```
+
 ##### Positive associated functions at element level
 
 ```{r hmsc_origin_element_significant, warning=FALSE, comments="", message=FALSE}
@@ -383,7 +462,7 @@ element_predictions %>%
 
 ```
 
-```{r community_weighed_pos, warning=FALSE, comments="", message=FALSE}
+```{r community_weighed_pos, warning=FALSE, comments="", message=FALSE, eval=FALSE}
 #Get community-weighed average GIFTs per sample
 genome_counts_row <- genome_counts %>%
   mutate_at(vars(-genome),~./sum(.)) %>% 
@@ -424,7 +503,7 @@ element_gift_filt %>%
   rownames_to_column(., "Elements")  %>%
   left_join(.,uniqueGIFT_db[c(1,3)],by = join_by(Elements == Code_element))
 ```
-```{r elements_post_plot, comment="", echo=FALSE, message=FALSE, warning=FALSE}
+```{r elements_post_plot, comment="", echo=FALSE, message=FALSE, warning=FALSE, eval=FALSE}
 element_gift_names <- element_gift_filt%>%
   select(-Origin)%>%
    t() %>%
@@ -474,7 +553,7 @@ element_predictions %>%
   paged_table()
 ```
 
-```{r community_weighed_neg, warning=FALSE, comments="", message=FALSE}
+```{r community_weighed_neg, warning=FALSE, comments="", message=FALSE, eval=FALSE}
 element_gift_t <- GIFTs_elements_community  %>% 
   t() %>%
 #  row_to_names(row_number = 1) %>%
@@ -508,7 +587,7 @@ element_gift_filt %>%
   rownames_to_column(., "Elements")  %>%
   left_join(.,uniqueGIFT_db[c(1,3)],by = join_by(Elements == Code_element))
 ```
-```{r elements_neg_plot, comment="", echo=FALSE, message=FALSE, warning=FALSE}
+```{r elements_neg_plot, comment="", echo=FALSE, message=FALSE, warning=FALSE, eval=FALSE}
 element_gift_names <- element_gift_filt%>%
   select(-Origin)%>%
    t() %>%
@@ -527,11 +606,7 @@ element_gift_names <- element_gift_filt%>%
   left_join(., sample_metadata[c(4,9)], by = join_by(sample == sample))
 
 element_gift_names$Origin <- factor(element_gift_names$Origin, levels=c("Tame", "Feral"))
-<<<<<<< HEAD
 colNames <- names(element_gift_names)[2:26]
-=======
-colNames <- names(element_gift_names)[2:28]
->>>>>>> 07d9ceaa25b8b3c70402bd9fb4f7adeed7a505f4
 for(i in colNames){
   plt <- ggplot(element_gift_names, aes(x=Origin, y=.data[[i]], color = Origin, fill=Origin)) +
     geom_boxplot(alpha = 0.2, outlier.shape = NA, width = 0.3, show.legend = FALSE) +
@@ -547,6 +622,7 @@ for(i in colNames){
   print(plt)
 }
 ```
+
 ```{r hmsc_origin_significant_plot, warning=FALSE, comments="", message=FALSE}
 
 positive <- element_predictions %>%
@@ -693,10 +769,11 @@ bind_rows(positive,negative) %>%
 ```
 
 ### Sex
+#### Positively associated genomes male cats
 
-#### Negatively associated genomes with male cats
-
-```{r hmsc_positive_sex, warning=FALSE, comments="", message=FALSE}
+```{r hmsc_negative_origin, warning=FALSE, comments="", message=FALSE}
+# Select modelchain of interest
+load("hmsc/fit_model1_250_10.Rdata")
 # Compute variance partitioning
 varpart=computeVariancePartitioning(m)
 
@@ -737,11 +814,33 @@ getPostEstimate(hM=m, parName="Beta")$support %>%
           value >= support ~ "Positive",
           value <= negsupport ~ "Negative",
           TRUE ~ "Neutral")) %>%
+    filter(variable=="sexMale", trend=="Positive") %>%
+    arrange(value) %>%
+    left_join(genome_metadata,by=join_by(genome==genome)) %>%
+    dplyr::select(genome,phylum,class,order,family,species,value) %>%
+    arrange(phylum,class,family,species)%>%
+  paged_table()
+```
+
+#### Negatively associated genomes with male cats
+
+```{r hmsc_positive_sex, warning=FALSE, comments="", message=FALSE}
+
+getPostEstimate(hM=m, parName="Beta")$support %>%
+    as.data.frame() %>%
+    mutate(variable=m$covNames) %>%
+    pivot_longer(!variable, names_to = "genome", values_to = "value") %>%
+    mutate(trend = case_when(
+          value >= support ~ "Positive",
+          value <= negsupport ~ "Negative",
+          TRUE ~ "Neutral")) %>%
     filter(variable=="sexMale", trend=="Negative") %>%
     arrange(-value) %>%
     left_join(genome_metadata,by=join_by(genome==genome)) %>%
     dplyr::select(genome,phylum,class,order,family,species,value) %>%
-    arrange(phylum, class, family)%>%
+    arrange(phylum, class, order, family)%>%
+    group_by(phylum, family) %>%
+ #   summarise(count=n())
   paged_table()
 ```
 
@@ -785,6 +884,16 @@ inner_join(estimate,support,by=join_by(genome==genome)) %>%
       labs(x = "Beta regression coefficient", y = "Posterior probability") +
       theme_minimal()+
        theme(legend.position = "none")
+
+###
+inner_join(estimate,support,by=join_by(genome==genome)) %>%
+  group_by(genome) %>% 
+      summarise(mean,
+        p1 = quantile(mean, probs = 0.1),
+        p9 = quantile(mean, probs = 0.9),
+        positive_support = sum(mean > 0)/1000,
+        negative_support = sum(mean < 0)/1000)
+###
 ```
 
 
@@ -792,14 +901,13 @@ inner_join(estimate,support,by=join_by(genome==genome)) %>%
 
 ```{r hmsc_predictions_sex, warning=FALSE, comments="", message=FALSE}
 
-# Select modelchain of interest
-load("hmsc/fit_model1_250_10.Rdata")
+
 
 gradient = c("Male","Female","Unknown")
 gradientlength = length(gradient)
 
 #Treatment-specific gradient predictions
-pred <- constructGradient(m, 
+pred_sex <- constructGradient(m, 
                       focalVariable = "sex", 
                       non.focalVariables = list(logseqdepth=list(1),location=list(1))) %>%
             predict(m, Gradient = ., expected = TRUE) %>%
@@ -817,7 +925,7 @@ elements_table <- genome_gifts %>%
     to.elements(., GIFT_db) %>%
     as.data.frame()
 
-community_elements <- pred %>%
+community_elements_sex <- pred_sex %>%
   group_by(sex, genome) %>%
   mutate(row_id = row_number()) %>%
   pivot_wider(names_from = genome, values_from = value) %>%
@@ -841,7 +949,7 @@ calculate_slope <- function(x) {
   coef(lm_fit)[2]
 }
 
-element_predictions <- map_dfc(community_elements, function(mat) {
+element_predictions_sex <- map_dfc(community_elements_sex, function(mat) {
       mat %>%
         column_to_rownames(var = "sex") %>%
         t() %>%
@@ -851,7 +959,7 @@ element_predictions <- map_dfc(community_elements, function(mat) {
         dplyr::select(slope) }) %>%
       t() %>%
       as.data.frame() %>%
-      set_names(colnames(community_elements[[1]])[-1]) %>%
+      set_names(colnames(community_elements_sex[[1]])[-1]) %>%
       rownames_to_column(var="iteration") %>%
       pivot_longer(!iteration, names_to="trait",values_to="value") %>%
       group_by(trait) %>%
@@ -872,7 +980,7 @@ unique_funct_db<- GIFT_db[c(2,4,5,6)] %>%
   distinct(Code_element, .keep_all = TRUE)
 
 
-element_predictions %>%
+element_predictions_sex %>%
   filter(mean >0) %>%
   arrange(-positive_support) %>%
   filter(positive_support>=0.9) %>%
@@ -883,7 +991,7 @@ element_predictions %>%
 ##### Negatively associated functions at element level
 
 ```{r hmsc_sex_element_significant_neg, warning=FALSE, comments="", message=FALSE}
-element_predictions %>%
+element_predictions_sex %>%
   filter(mean <0) %>%
   arrange(-negative_support) %>%
   filter(negative_support>=0.9) %>%
@@ -891,25 +999,25 @@ element_predictions %>%
   arrange(Domain,Function)
 ```
 
-```{r hmsc_sex_significant_plot, warning=FALSE, comments="", message=FALSE}
+```{r hmsc_sex_significant_plot, warning=FALSE, comments="", message=FALSE, fig.height=10, fig.width=8, fig.fullwidth=TRUE}
 
-positive <- element_predictions %>%
+positive_sex <- element_predictions_sex %>%
   filter(mean >0) %>%
   arrange(mean) %>%
   filter(positive_support>=0.9) %>%
   dplyr::select(-negative_support) %>%
   rename(support=positive_support)
 
-negative <- element_predictions %>%
+negative_sex <- element_predictions_sex %>%
   filter(mean <0) %>%
   arrange(mean) %>%
   filter(negative_support>=0.9) %>%
   dplyr::select(-positive_support) %>%
   rename(support=negative_support)
 
-bind_rows(positive,negative) %>%
+bind_rows(positive_sex,negative_sex) %>%
   left_join(GIFT_db,by=join_by(trait==Code_element)) %>%
-  mutate(trait=factor(trait,levels=c(rev(positive$trait),rev(negative$trait)))) %>%
+  mutate(trait=factor(trait,levels=c(rev(positive_sex$trait),rev(negative_sex$trait)))) %>%
   ggplot(aes(x=mean, y=fct_rev(trait), xmin=p1, xmax=p9, color=Function)) +
       geom_point() +
       geom_errorbar() +
@@ -920,6 +1028,26 @@ bind_rows(positive,negative) %>%
       labs(x="Regression coefficient",y="Functional trait")
 ```
 
+```{r hmsc_origin_significant_plot1, warning=FALSE, comments="", message=FALSE, fig.height=10, fig.width=8, fig.fullwidth=TRUE}
+pdf("figures/Functional_sex.pdf",width=9, height=10)
+table <- bind_rows(positive_sex,negative_sex) %>%
+  left_join(unique_funct_db,by=join_by(trait==Code_element)) #%>%
+#  mutate(trait=factor(trait,levels=c(rev(positive_sex$trait),rev(negative_sex$trait)))) 
+table$function_element<- paste(table$Function,table$Element, sep="_")
+
+table %>%
+  mutate(function_element=factor(function_element,levels=c(table$function_element))) %>%
+  ggplot(aes(x=mean, y=fct_rev(function_element), xmin=p1, xmax=p9, color=Function)) +
+      geom_point(show.legend = FALSE) +
+      geom_errorbar(show.legend = FALSE) +
+#      xlim(c(-0.04,0.04)) +
+      geom_vline(xintercept=0) +
+#      scale_color_manual(values = c("#debc14","#440526","#dc7c17","#172742","#debc14","#440526","#dc7c17","#172742","#357379","#6c7e2c","#d8dc69","#774d35","#db717d")) +
+      theme_minimal() +
+      labs(x="Regression coefficient",y="Functional trait")
+dev.off()
+```
+
 #### Function level
 
 ```{r hmsc_sex_function_predictions, warning=FALSE, comments="", message=FALSE}
@@ -927,7 +1055,7 @@ functions_table <- elements_table %>%
     to.functions(., GIFT_db) %>%
     as.data.frame()
 
-community_functions <- pred %>%
+community_functions_sex <- pred_sex %>%
   group_by(sex, genome) %>%
   mutate(row_id = row_number()) %>%
   pivot_wider(names_from = genome, values_from = value) %>%
@@ -954,7 +1082,7 @@ calculate_slope <- function(x) {
   coef(lm_fit)[2]
 }
 
-function_predictions <- map_dfc(community_functions, function(mat) {
+function_predictions_sex <- map_dfc(community_functions_sex, function(mat) {
       mat %>%
         column_to_rownames(var = "sex") %>%
         t() %>%
@@ -964,7 +1092,7 @@ function_predictions <- map_dfc(community_functions, function(mat) {
         dplyr::select(slope) }) %>%
       t() %>%
       as.data.frame() %>%
-      set_names(colnames(community_functions[[1]])[-1]) %>%
+      set_names(colnames(community_functions_sex[[1]])[-1]) %>%
       rownames_to_column(var="iteration") %>%
       pivot_longer(!iteration, names_to="trait",values_to="value") %>%
       group_by(trait) %>%
@@ -976,13 +1104,13 @@ function_predictions <- map_dfc(community_functions, function(mat) {
       arrange(-positive_support)
 
 # Positively associated
-function_predictions %>%
+function_predictions_sex %>%
   filter(mean >0) %>%
   arrange(-positive_support) %>%
   paged_table()
 
 # Negatively associated
-function_predictions %>%
+function_predictions_sex %>%
   filter(mean <0) %>%
   arrange(-negative_support) %>%
   paged_table()
@@ -991,29 +1119,37 @@ function_predictions %>%
 
 ```{r hmsc_sex_function_significant_plot, warning=FALSE, comments="", message=FALSE}
 
-positive <- function_predictions %>%
+positive_sex <- function_predictions_sex %>%
   filter(mean >0) %>%
   arrange(mean) %>%
   filter(positive_support>=0.9) %>%
   dplyr::select(-negative_support) %>%
-  rename(support=positive_support)
+  rename(support=positive_support)%>%
+  left_join(unique_funct_db,by=join_by(trait==Code_function))
 
-negative <- function_predictions %>%
+negative_sex <- function_predictions_sex %>%
   filter(mean <0) %>%
   arrange(mean) %>%
   filter(negative_support>=0.9) %>%
   dplyr::select(-positive_support) %>%
-  rename(support=negative_support)
+  rename(support=negative_support)%>%
+  left_join(unique_funct_db,by=join_by(trait==Code_function))
 
-bind_rows(positive,negative) %>%
-  left_join(GIFT_db,by=join_by(trait==Code_function)) %>%
-  mutate(trait=factor(trait,levels=c(rev(positive$trait),rev(negative$trait)))) %>%
-  ggplot(aes(x=mean, y=fct_rev(trait), xmin=p1, xmax=p9, color=Function)) +
-      geom_point() +
-      geom_errorbar() +
+unique_funct_db<- GIFT_db[c(3,4,5)] %>% 
+  distinct(Code_function, .keep_all = TRUE)
+pdf("figures/Functional_trait_sex.pdf",width=9, height=8)
+bind_rows(positive_sex,negative_sex) %>%
+  left_join(unique_funct_db,by=join_by(trait==Code_function)) %>%
+  mutate(Function.x=factor(Function.x,levels=c(rev(positive_sex$Function),rev(negative_sex$Function)))) %>%
+  ggplot(aes(x=mean, y=fct_rev(Function.x), xmin=p1, xmax=p9, color=Function.x)) +
+      geom_point(show.legend = FALSE) +
+      geom_errorbar(show.legend = FALSE) +
 #      xlim(c(-0.02,0.02)) +
       geom_vline(xintercept=0) +
       scale_color_manual(values = c("#debc14","#440526","#dc7c17","#172742","#357379","#6c7e2c","#d8dc69","#774d35","#db717d")) +
       theme_minimal() +
       labs(x="Regression coefficient",y="Functional trait")
+dev.off()
 ```
+
+

@@ -1,7 +1,7 @@
 # Alpha diversity
 
 ```{r load_data_alpha}
-load("data/data.Rdata")
+load("data/data1.Rdata")
 ```
 
 ```{r alpha_div, comment="", message=FALSE, warning=FALSE}
@@ -55,116 +55,68 @@ alpha_div <- richness %>%
   full_join(functional, by = join_by(sample == sample))
 ```
 
-```{r alpha_div_boxplot, comment="", message=FALSE, warning=FALSE, fig.height=3, fig.width=10, fig.fullwidth=TRUE}
+## By location
+### Plots
+```{r}
+richness_mean <- alpha_div %>%
+  left_join(sample_metadata, by = join_by(sample == sample))%>%
+  group_by(Location) %>%
+  dplyr::summarise_at(.vars = names(.)[2], .funs = c("Richness mean" = "mean", "Richness sd" = "sd"))
 
-#Richness
+neutral_mean <- alpha_div %>%
+  left_join(sample_metadata, by = join_by(sample == sample))%>%
+  group_by(Location) %>%
+  dplyr::summarise_at(.vars = names(.)[3], .funs = c("Neutral mean" = "mean", "Neutral sd" = "sd"))
+
+phylogenetic_mean <- alpha_div %>%
+  left_join(sample_metadata, by = join_by(sample == sample))%>%
+  group_by(Location) %>%
+  dplyr::summarise_at(.vars = names(.)[4], .funs = c("Phylogenetic mean" = "mean", "Phylogenetic sd" = "sd"))
+
+cbind(richness_mean, neutral_mean[, 2:3], phylogenetic_mean[, 2:3])%>%
+  tt()
+```
+```{r}
+alpha_colors <- c('#c4d7d1','#408892','#2d3749','#c04062','#6b3a59','#e08683')
+group_n <- alpha_div %>%
+  left_join(., sample_metadata, by = join_by(sample == sample))%>%
+  select(Location) %>%
+  pull() %>%
+  unique() %>%
+  length()
+
+#pdf("figures/diversity_location.pdf",width=20, height=9)
 alpha_div %>%
   pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
   left_join(., sample_metadata, by = join_by(sample == sample)) %>%
-  filter(!is.na(Location)) %>%
-  filter(metric=="richness") %>%
-      ggplot(aes(y = value, x = Origin, group=Origin, color=Origin, fill=Origin)) +
-      geom_boxplot(outlier.shape = NA) +
-      geom_jitter(alpha=0.5) +
-      scale_color_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          values=c("#6A9AC3","#F3B942")) +
-      scale_fill_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          values=c("#6A9AC350","#F3B94250")) +
-      facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
-      coord_cartesian(xlim = c(1, NA)) +
-      theme_classic() +
-      theme(
+  mutate(metric=factor(metric,levels=c("richness","neutral","phylogenetic","functional"))) %>%
+  ggplot(aes(y = value, x = Location, group=Location,color=Location,fill=Location)) +
+  geom_boxplot(outlier.shape = NA, show.legend = FALSE) +
+  geom_jitter(alpha=0.5) +
+  scale_color_manual(values = alpha_colors[c(1:group_n)]) +
+  scale_fill_manual(values = paste0(alpha_colors[c(1:group_n)], "50")) +
+  facet_wrap(. ~ metric, scales = "free", ncol=4) +
+  coord_cartesian(xlim = c(1, NA)) +
+  theme_classic() +
+  theme(
+    axis.ticks.x = element_blank(),
+        strip.text.x = element_text(size = 12, color="black",face="bold"),
         strip.background = element_blank(),
         panel.grid.minor.x = element_line(size = .1, color = "grey"),
         axis.title.x = element_blank(),
         axis.title.y = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1)
-      )
-
-#Neutral
-alpha_div %>%
-  pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
-  left_join(., sample_metadata, by = join_by(sample == sample)) %>%
-  filter(!is.na(Location)) %>%
-  filter(metric=="neutral") %>%
-      ggplot(aes(y = value, x = Origin, group=Origin, color=Origin, fill=Origin)) +
-      geom_boxplot(outlier.shape = NA) +
-      geom_jitter(alpha=0.5) +
-      scale_color_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          values=c("#6A9AC3","#F3B942")) +
-      scale_fill_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          values=c("#6A9AC350","#F3B94250")) +
-      facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
-      coord_cartesian(xlim = c(1, NA)) +
-      theme_classic() +
-      theme(
-        strip.background = element_blank(),
-        panel.grid.minor.x = element_line(size = .1, color = "grey"),
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1)
-      )
-
-#Phylogenetic
-alpha_div %>%
-  pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
-  left_join(., sample_metadata, by = join_by(sample == sample)) %>%
-  filter(!is.na(Location)) %>%
-  filter(metric=="phylogenetic") %>%
-      ggplot(aes(y = value, x = Origin, group=Origin, color=Origin, fill=Origin)) +
-      geom_boxplot(outlier.shape = NA) +
-      geom_jitter(alpha=0.5) +
-      scale_color_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          values=c("#6A9AC3","#F3B942")) +
-      scale_fill_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          values=c("#6A9AC350","#F3B94250")) +
-      facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
-      coord_cartesian(xlim = c(1, NA)) +
-      theme_classic() +
-      theme(
-        strip.background = element_blank(),
-        panel.grid.minor.x = element_line(size = .1, color = "grey"),
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1)
-      )
-
-#Functional
-alpha_div %>%
-  pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
-  left_join(., sample_metadata, by = join_by(sample == sample)) %>%
-  filter(!is.na(Location)) %>%
-  filter(metric=="functional") %>%
-      ggplot(aes(y = value, x = Origin, group=Origin, color=Origin, fill=Origin)) +
-      geom_boxplot(outlier.shape = NA) +
-      geom_jitter(alpha=0.5) +
-      scale_color_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          values=c("#6A9AC3","#F3B942")) +
-      scale_fill_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          values=c("#6A9AC350","#F3B94250")) +
-      facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
-      coord_cartesian(xlim = c(1, NA)) +
-      theme_classic() +
-      theme(
-        strip.background = element_blank(),
-        panel.grid.minor.x = element_line(size = .1, color = "grey"),
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1)
-      )
+        axis.text.x = element_blank(),
+        legend.text=element_text(size=10),
+        legend.title = element_text(size=12))+
+    guides(fill = guide_legend(override.aes = list(size=3)))
+#dev.off()
 ```
 
-## Mixed models 
 
-```{r model_rich, comment="", message=FALSE, warning=FALSE}
+### Mixed models 
+
+***Richness***
+```{r model_rich, comment="", echo=FALSE, message=FALSE, warning=FALSE}
 library(MASS)
 alpha_div_meta <- alpha_div %>%
   left_join(sample_metadata, by = join_by(sample == sample))
@@ -177,6 +129,7 @@ emmeans(Modelq0_Loca, pairwise ~ Location)
 detach("package:MASS", unload = TRUE)
 ```
 
+***Neutral***
 ```{r model_neutral, comment="", message=FALSE, warning=FALSE}
 #Modelq1_all <- lm(formula = neutral ~ Location+Age+F.M+Bites+Hisses+Retreats+Vocalization+Acceptance+Sedating+Healthy+Dry_skin+Stiff+Agile, data = alpha_div_meta)
 #anova(Modelq1_all)
@@ -186,6 +139,7 @@ r.squaredGLMM(Modelq1_Loca)
 emmeans(Modelq1_Loca, pairwise ~ Location)
 ```
 
+***Phylogenetic***
 ```{r model_phylo, comment="", message=FALSE, warning=FALSE}
 Modelq1p_Loca <- lm(formula = phylogenetic ~ Location, data = alpha_div_meta) 
 anova(Modelq1p_Loca)
@@ -193,6 +147,7 @@ r.squaredGLMM(Modelq1p_Loca)
 emmeans(Modelq1p_Loca, pairwise ~ Location)
 ```
 
+***Functional***
 ```{r model_funct, comment="", message=FALSE, warning=FALSE}
 Modelq1F_Loca <- lm(formula = functional ~ Location, data = alpha_div_meta) 
 anova(Modelq1F_Loca)
@@ -200,3 +155,155 @@ r.squaredGLMM(Modelq1F_Loca)
 emmeans(Modelq1F_Loca, pairwise ~ Location)
 ```
 
+## By behaviour and location
+### Plots
+
+***Richness***
+
+```{r alpha_div_rich_boxplot, comment="", message=FALSE, warning=FALSE, fig.height=3, fig.width=10, fig.fullwidth=TRUE}
+alpha_div %>%
+  pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
+  left_join(., sample_metadata, by = join_by(sample == sample)) %>%
+  filter(!is.na(Location)) %>%
+  filter(metric=="richness") %>%
+      ggplot(aes(y = value, x = Condition, group=Condition, color=Condition, fill=Condition)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha=0.5) +
+      scale_color_manual(name="Condition",
+          breaks=c("Domestic","Feral"),
+          values=c("#6A9AC3","#F3B942")) +
+      scale_fill_manual(name="Condition",
+          breaks=c("Domestic","Feral"),
+          values=c("#6A9AC350","#F3B94250")) +
+      facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
+      coord_cartesian(xlim = c(1, NA)) +
+      theme_classic() +
+      theme(
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_line(size = .1, color = "grey"),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1)
+      )
+```
+
+***Neutral***
+```{r alpha_div_neutral_boxplot, comment="", message=FALSE, warning=FALSE, fig.height=3, fig.width=10, fig.fullwidth=TRUE}
+#pdf("figures/alpha_q1n_behaviour.pdf",width=9, height=5)
+alpha_div %>%
+  pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
+  left_join(., sample_metadata, by = join_by(sample == sample)) %>%
+  filter(!is.na(Location)) %>%
+  filter(metric=="neutral") %>%
+      ggplot(aes(y = value, x = Condition, group=Condition, color=Condition, fill=Condition)) +
+      geom_boxplot(outlier.shape = NA, show.legend = FALSE) +
+      geom_jitter(alpha=0.5, show.legend = FALSE) +
+      scale_color_manual(name="Condition",
+          breaks=c("Domestic","Feral"),
+          values=c("#6A9AC3","#F3B942")) +
+      scale_fill_manual(name="Condition",
+          breaks=c("Domestic","Feral"),
+          values=c("#6A9AC350","#F3B94250")) +
+      facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
+      coord_cartesian(xlim = c(1, NA)) +
+      theme_classic() +
+      theme(
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_line(size = .1, color = "grey"),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+      )
+#dev.off()
+```
+
+***Phylogenetic***
+```{r alpha_div_phylo_boxplot, comment="", message=FALSE, warning=FALSE, fig.height=3, fig.width=10, fig.fullwidth=TRUE}
+
+#pdf("figures/alpha_q1p_behaviour.pdf",width=9, height=5)
+alpha_div %>%
+  pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
+  left_join(., sample_metadata, by = join_by(sample == sample)) %>%
+  filter(!is.na(Location)) %>%
+  filter(metric=="phylogenetic") %>%
+      ggplot(aes(y = value, x = Condition, group=Condition, color=Condition, fill=Condition)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha=0.5, show.legend = FALSE) +
+      scale_color_manual(name="Condition",
+          breaks=c("Domestic","Feral"),
+          values=c("#6A9AC3","#F3B942")) +
+      scale_fill_manual(name="Condition",
+          breaks=c("Domestic","Feral"),
+          values=c("#6A9AC350","#F3B94250")) +
+      facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
+      coord_cartesian(xlim = c(1, NA)) +
+      theme_classic() +
+      theme(
+         axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_line(size = .1, color = "grey"),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank()
+      )
+#dev.off()
+```
+
+***Functional***
+```{r alpha_div_func_boxplot, comment="", message=FALSE, warning=FALSE, fig.height=3, fig.width=10, fig.fullwidth=TRUE}
+
+alpha_div %>%
+  pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
+  left_join(., sample_metadata, by = join_by(sample == sample)) %>%
+  filter(!is.na(Location)) %>%
+  filter(metric=="functional") %>%
+      ggplot(aes(y = value, x = Condition, group=Condition, color=Condition, fill=Condition)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha=0.5) +
+      scale_color_manual(name="Condition",
+          breaks=c("Domestic","Feral"),
+          values=c("#6A9AC3","#F3B942")) +
+      scale_fill_manual(name="Condition",
+          breaks=c("Domestic","Feral"),
+          values=c("#6A9AC350","#F3B94250")) +
+      facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
+      coord_cartesian(xlim = c(1, NA)) +
+      theme_classic() +
+      theme(
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_line(size = .1, color = "grey"),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1)
+      )
+```
+
+### Mixed models 
+
+***Richness***
+```{r}
+Model_richness <- glmer.nb(richness ~ Origin+F.M+(1|Location), data = alpha_div_meta)
+summary(Model_richness)
+```
+
+***Neutral***
+```{r}
+Model_neutral <- lme(fixed = neutral ~ Origin+F.M, data = alpha_div_meta,
+               random = ~ 1 | Location)#log(seq_depth)+
+summary(Model_neutral)
+```
+
+***Phylogenetic***
+```{r}
+Model_phylo <- lme(fixed = phylogenetic ~ Origin+F.M, data = alpha_div_meta,
+               random = ~ 1 | Location)
+summary(Model_phylo)
+```
+
+***Functional***
+```{r}
+Model_func <- lme(fixed = functional ~ Origin+F.M, data = alpha_div_meta,
+               random = ~ 1 | Location)
+summary(Model_func)
+```
