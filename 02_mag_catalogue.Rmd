@@ -1,7 +1,7 @@
 # MAG catalogue
 
-```{r load_data_mag}
-load("data/data1.Rdata")
+```{r load_data_mag, message=FALSE, warning=FALSE}
+load("data/data_arrange.Rdata")
 ```
 
 ## Genome phylogeny

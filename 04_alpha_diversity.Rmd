@@ -1,7 +1,7 @@
 # Alpha diversity
 
 ```{r load_data_alpha}
-load("data/data1.Rdata")
+load("data/data_arrange.Rdata")
 ```
 
 ```{r alpha_div, comment="", message=FALSE, warning=FALSE}

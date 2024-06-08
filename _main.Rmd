@@ -88,6 +88,7 @@ library(nlme)
 library(emmeans)
 library(hilldiv2)
 library(distillR)
+library(pairwiseAdonis)
 ```
 
 <!--chapter:end:index.Rmd-->
@@ -103,6 +104,11 @@ Load the original data files outputted by the bioinformatic pipeline.
 ```{r load_sample_metadata, warning=FALSE, comments="", message=FALSE}
 sample_metadata <- read_csv("data/sample_metadata.csv") %>%
     rename(sample=CombinedID)
+#    %>%rename(Origin=Condition)%>%
+#    rename(F.M=Sex)
+
+sample_metadata$Condition = recode(sample_metadata$Origin,
+                 Tame = "Domestic")
 ```
 
 ### Read counts
@@ -111,6 +117,7 @@ sample_metadata <- read_csv("data/sample_metadata.csv") %>%
 read_counts <- read_tsv("data/read_counts.tsv") %>%
     rename(genome=1) %>%
     dplyr::select(c("genome",sample_metadata$sample))
+genomes<-read_counts$genome
 ```
 
 ### Genome coverage
@@ -118,7 +125,8 @@ read_counts <- read_tsv("data/read_counts.tsv") %>%
 ```{r load_genome_hits, warning=FALSE, comments="", message=FALSE}
 genome_coverage <- read_tsv("data/genome_coverage.tsv") %>%
     rename(genome=1) %>%
-    dplyr::select(c("genome",sample_metadata$sample))
+    dplyr::select(c("genome",sample_metadata$sample))%>%
+  arrange(match(genome, genomes))
 ```
 
 ### Genome metadata
@@ -131,7 +139,8 @@ genome_metadata <- read_csv("data/genome_metadata.csv") %>%
         phylum == "Firmicutes_A" ~ "Bacillota_A",
         phylum == "Firmicutes_C" ~ "Bacillota_C",
         phylum == "Proteobacteria" ~ "Pseudomonadota",
-        TRUE ~ phylum))
+        TRUE ~ phylum))%>%
+  arrange(match(genome, genomes))
 ```
 
 ### Genome tree
@@ -168,6 +177,8 @@ read_counts_filt <- genome_coverage %>%
 readlength=150
 genome_counts <- read_counts %>%
   mutate(across(where(is.numeric), ~ . / (genome_metadata$length / readlength) ))
+
+#read_counts %>% select(-genome)%>% colSums()%>%as.data.frame() %>% rename(depth=".") %>% colSums()
 ```
 
 ```{r calculate_genome_counts_filtered, warning=FALSE, comments="", message=FALSE}
@@ -233,15 +244,15 @@ save(sample_metadata,
      phylum_colors,
      physeq_genome,
      physeq_genome_clr,
-     file = "data/data.Rdata")
+     file = "data/data_arrange.Rdata")
 ```
 
 <!--chapter:end:01_data_preparation.Rmd-->
 
 # MAG catalogue
 
-```{r load_data_mag}
-load("data/data.Rdata")
+```{r load_data_mag, message=FALSE, warning=FALSE}
+load("data/data_arrange.Rdata")
 ```
 
 ## Genome phylogeny
@@ -363,6 +374,7 @@ genome_completeness <- genome_metadata %>%
                     plot.margin = unit(c(0, 0, 0, 0.50),"inches")) #add left-margin (top, right, bottom, left)
 
 #Render composite figure
+#pdf("figures/completeness_contamination.pdf",width=10, height=5)
 grid.arrange(grobs = list(genome_completeness,genome_biplot,genome_contamination),
         layout_matrix = rbind(c(1,1,1,1,1,1,1,1,1,1,1,4),
                               c(2,2,2,2,2,2,2,2,2,2,2,3),
@@ -376,7 +388,7 @@ grid.arrange(grobs = list(genome_completeness,genome_biplot,genome_contamination
                               c(2,2,2,2,2,2,2,2,2,2,2,3),
                               c(2,2,2,2,2,2,2,2,2,2,2,3),
                               c(2,2,2,2,2,2,2,2,2,2,2,3)))
-
+#dev.off()
 ```
 
 
@@ -449,12 +461,60 @@ function_ordination <- tSNE_function$Y %>%
 function_ordination
 ```
 
+
+```{r phyloseq, comment="", echo=FALSE, message=FALSE, warning=FALSE}
+#Phyloseq object
+count_phy <- genome_counts %>%
+  column_to_rownames(var="genome")%>%
+  otu_table(., taxa_are_rows=T)
+
+sample_info_tab_phy <- sample_metadata%>%
+  column_to_rownames(var="sample")%>%
+  sample_data()
+
+TAX <- genome_metadata%>%
+  column_to_rownames(var="genome")%>%
+  select(1:7)%>%
+  as.matrix()%>%
+  tax_table()
+tree <- phy_tree(genome_tree)
+
+physeq_all = phyloseq(count_phy, TAX, sample_info_tab_phy, tree)
+```
+
+## MAGs in different locations and shared among locations
+
+```{r chart1, comment="", echo=FALSE, message=FALSE, warning=FALSE}
+locationcolors=c('#c4d7d1','#408892','#2d3749','#c04062','#6b3a59','#e08683')
+
+genome_counts_rel <- genome_counts %>%
+  mutate_at(vars(-genome),~./sum(.)) %>%
+  column_to_rownames(., "genome")
+  
+genome_counts_rel_pa=1*(genome_counts_rel>0)
+#MAGrel_pa[1:6,1:6]
+table_upset_analysis_cont=t(aggregate(t(genome_counts_rel_pa),by=list(sample_metadata$Location),FUN=sum)[,-1])
+colnames(table_upset_analysis_cont)=levels(as.factor(sample_metadata$Location))
+table_upset_analysis=(table_upset_analysis_cont>0)*1
+table_upset_analysis=data.frame(table_upset_analysis)
+table_upset_analysis=apply(table_upset_analysis,2,as.integer)
+rownames(table_upset_analysis) <- rownames(genome_counts_rel_pa)
+
+#pdf("figures/MAG_intersection.pdf",width=8,height=6, onefile=F)
+upset(as.data.frame(table_upset_analysis),
+  keep.order = T,
+  sets = rev(c("Aruba","Brazil","CaboVerde","Denmark","Malaysia","Spain")),
+  sets.bar.color= rev(locationcolors),
+  mb.ratio = c(0.55, 0.45), order.by = "freq")
+#dev.off()
+```
+
 <!--chapter:end:02_mag_catalogue.Rmd-->
 
 # Community composition
 
 ```{r load_data_community}
-load("data/data.Rdata")
+load("data/data_arrange.Rdata")
 ```
 
 ## Taxonomy overview 
@@ -509,6 +569,32 @@ genome_counts_filt %>%
           strip.text = element_text(size = 12, lineheight = 0.6)) +
    labs(fill="Phylum",y = "Relative abundance",x="Samples")
 ```
+
+```{r taxonomy_barplot_behaviour_location, fig.height=6, fig.width=10, fig.fullwidth=TRUE}
+genome_counts_filt %>%
+  mutate_at(vars(-genome),~./sum(.)) %>% #apply TSS nornalisation
+  pivot_longer(-genome, names_to = "sample", values_to = "count") %>% #reduce to minimum number of columns
+  left_join(., genome_metadata, by = join_by(genome == genome)) %>% #append genome metadata
+  left_join(., sample_metadata, by = join_by(sample == sample)) %>% #append sample metadata
+  filter(count > 0) %>% #filter 0 counts
+  ggplot(., aes(x=sample,y=count, fill=phylum, group=phylum)) + #grouping enables keeping the same sorting of taxonomic units
+    geom_bar(stat="identity", colour="white", linewidth=0.1) + #plot stacked bars with white borders
+    scale_fill_manual(values=phylum_colors) +
+    facet_nested(.~Origin+Location,  scales="free_x") + #facet per day and treatment
+    guides(fill = guide_legend(ncol = 1)) +
+    theme(axis.text.x = element_blank(),
+          axis.ticks.x =element_blank(),
+          axis.title.x = element_blank(),
+          axis.text.y = element_text(size=8),
+          axis.title.y = element_text(size=12),
+          panel.background = element_blank(),
+          axis.line = element_line(linewidth = 0.5, linetype = "solid", colour = "black"),
+          panel.border = element_rect(colour = "black", fill = NA),
+          strip.background = element_rect(fill = "white", color = "black"),
+          strip.text = element_text(size = 10, lineheight = 0.6)) +
+   labs(fill="Phylum",y = "Relative abundance",x="Samples")
+```
+
 ### Phylum relative abundances
 
 ```{r taxonomy_phylum_summary, warning=FALSE, comments="", message=FALSE}
@@ -573,6 +659,20 @@ phylum_summary %>%
         theme(legend.position="none") +
         labs(y="Phylum",x="Relative abundance")
 ```
+### Phylum percentages all
+
+```{r phylum_all, comment="", echo=FALSE}
+physeq_all.phylum <- microbiome::aggregate_taxa(physeq_genome, 'phylum')
+physeq_all.phylum.rel <-  microbiome::transform(physeq_all.phylum, "compositional")
+all.rel <- physeq_all.phylum.rel@otu_table*100
+means.all.rel <- as.data.frame(rowMeans(all.rel))
+sd.all.rel <- as.data.frame(rowSds(all.rel, useNames = TRUE))
+summary.phylum.all <- merge(means.all.rel, sd.all.rel, by="row.names")
+colnames(summary.phylum.all) <- c("Phylum","mean", "sd")
+summary.phylum.all%>%
+  arrange(-mean)%>%
+  tt()
+```
 
 ### Phylum percentages by behaviour
 
@@ -604,6 +704,36 @@ sd.tame.rel <- as.data.frame(rowSds(tame.rel, useNames = TRUE))
 summary.phylum.tame <- merge(means.tame.rel, sd.tame.rel, by="row.names")
 colnames(summary.phylum.tame) <- c("Phylum","mean", "sd")
 summary.phylum.tame%>%
+  arrange(-mean)%>%
+  tt()
+```
+
+### Family percentages all
+
+```{r family_all, comment="", echo=FALSE}
+physeq_all.family <- microbiome::aggregate_taxa(physeq_genome, 'family')
+physeq_all.family.rel <-  microbiome::transform(physeq_all.family, "compositional")
+all.rel <- physeq_all.family.rel@otu_table*100
+means.all.rel <- as.data.frame(rowMeans(all.rel))
+sd.all.rel <- as.data.frame(rowSds(all.rel, useNames = TRUE))
+summary.family.all <- merge(means.all.rel, sd.all.rel, by="row.names")
+colnames(summary.family.all) <- c("family","mean", "sd")
+summary.family.all%>%
+  arrange(-mean)%>%
+  tt()
+```
+
+### Genera percentages all
+
+```{r genus_all, comment="", echo=FALSE}
+physeq_all.genus <- microbiome::aggregate_taxa(physeq_genome, 'genus')
+physeq_all.genus.rel <-  microbiome::transform(physeq_all.genus, "compositional")
+all.rel <- physeq_all.genus.rel@otu_table*100
+means.all.rel <- as.data.frame(rowMeans(all.rel))
+sd.all.rel <- as.data.frame(rowSds(all.rel, useNames = TRUE))
+summary.genus.all <- merge(means.all.rel, sd.all.rel, by="row.names")
+colnames(summary.genus.all) <- c("genus","mean", "sd")
+summary.genus.all%>%
   arrange(-mean)%>%
   tt()
 ```
@@ -651,6 +781,7 @@ family_summary %>%
         labs(y="Family", x="Relative abundance", color="Phylum")
 
 # Per location
+#pdf("figures/family_location.pdf",width=10, height=5)
 family_summary %>%
   left_join(genome_metadata %>% dplyr::select(family,phylum) %>% unique(),by=join_by(family==family)) %>%
   left_join(sample_metadata,by=join_by(sample==sample)) %>%
@@ -666,14 +797,14 @@ family_summary %>%
   theme_minimal() +
   theme(legend.position="none",
               strip.text.x = element_text(size = 14, color="black",face="bold"),
-              axis.text.x = element_text(vjust = 0.5, size = 10),
+              axis.text.x = element_text(vjust = 0.5, size = 6),
               axis.text.y = element_text(size = 12),
               axis.line = element_line(size = 0.5, linetype = "solid", colour = "black"),
               axis.title = element_text(size = 14, face = "bold"),
               axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
               axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)))+
   labs(y="Family", x="Relative abundance", color="Phylum")
-
+#dev.off()
 ```
 
 ### Genus
@@ -709,26 +840,72 @@ genus_arrange <- genus_summary %>%
     pull()
 
 #Per day
+#pdf("figures/genera_location.pdf",width=10, height=5)
 genus_summary %>%
     left_join(sample_metadata,by=join_by(sample==sample)) %>%
     mutate(genus=factor(genus, levels=rev(genus_summary_sort %>% pull(genus)))) %>%
     filter(relabun > 0) %>%
-    ggplot(aes(x=relabun, y=genus, group=genus, color=phylum)) +
-        scale_color_manual(values=phylum_colors) +
-        geom_jitter(alpha=0.5) + 
-        facet_grid(.~Origin)+
-        theme_minimal() + 
-        labs(y="Family", x="Relative abundance", color="Phylum")
-
+    ggplot(aes(x=relabun, y=genus, group=genus, color=phylum))  +
+  scale_color_manual(values=phylum_colors) +
+  scale_fill_manual(values=phylum_colors) +
+  geom_boxplot(alpha=0.2)+
+  geom_jitter(alpha=0.5) + 
+  facet_grid(.~Location)+
+  theme_minimal() +
+  theme(legend.position="none",
+              strip.text.x = element_text(size = 14, color="black",face="bold"),
+              axis.text.x = element_text(vjust = 0.5, size = 6),
+              axis.text.y = element_text(size = 12),
+              axis.line = element_line(size = 0.5, linetype = "solid", colour = "black"),
+              axis.title = element_text(size = 14, face = "bold"),
+              axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
+              axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)))+
+  labs(y="Genera", x="Relative abundance", color="Phylum")
+#dev.off()
 ```
 
+```{r physeq_plotF, comment="", echo=FALSE, message=FALSE, warning=FALSE}
+top_genera<- aggregate_top_taxa2(physeq_genome, top = 14, "genus")
+physeq_gen.rel <-  microbiome::transform(top_genera, "compositional")
+dat.dataframe.top_genera = psmelt(physeq_gen.rel)
+
+#order_colors <- c("#cccccc","#D10908","#08D5D5", "#086372", "#E06708","#E2E308", "#E09F08","#08ACAC","#086C98","#08B86B")
+colourCount = length(unique(dat.dataframe.top_genera$OTU))
+getPalette = colorRampPalette(brewer.pal(14, "Accent"))
+
+dat.dataframe.top_genera$Treatment <- factor(dat.dataframe.top_genera$Treatment, levels = c("Neg_C", "Pos_C", "Pro_d1","Pro_d2"), 
+                  labels = c("Control", "Antibiotic", "Probiotic 0-10d","Probiotic 0-35d"))
+
+dat.dataframe.top_genera$Day <- factor(dat.dataframe.top_genera$Day, levels = c("7", "21"), 
+                  labels = c("Day 7", "Day 21"))
+
+#pdf("figures/genera_top15.pdf",width=14, height=9)
+ggplot(dat.dataframe.top_genera, aes(x=Sample,y=Abundance,fill=OTU))+ 
+  scale_fill_manual(values = getPalette(colourCount))+
+  geom_bar(stat="identity") +
+  facet_grid(~Location, scale="free", space = "free")+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        strip.text.x = element_text(size = 10, face = "bold"),
+        strip.background=element_rect(color="black", fill=NA, linetype = "solid"),
+        axis.title=element_text(size=14,face="bold"),
+        panel.background = element_rect(fill = NA, color = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(linewidth = 0.5, linetype = "solid", colour = "black"),
+        legend.title = element_text(size=14,face = "bold"),
+        legend.text = element_text(size=10),
+        legend.key.size = unit(0.5, 'cm'))+ 
+  labs(x=NULL,y = "Relative abundance",fill = "Genera")
+#dev.off()
+```
 
 <!--chapter:end:03_community_composition.Rmd-->
 
 # Alpha diversity
 
 ```{r load_data_alpha}
-load("data/data.Rdata")
+load("data/data_arrange.Rdata")
 ```
 
 ```{r alpha_div, comment="", message=FALSE, warning=FALSE}
@@ -782,116 +959,68 @@ alpha_div <- richness %>%
   full_join(functional, by = join_by(sample == sample))
 ```
 
-```{r alpha_div_boxplot, comment="", message=FALSE, warning=FALSE, fig.height=3, fig.width=10, fig.fullwidth=TRUE}
+## By location
+### Plots
+```{r}
+richness_mean <- alpha_div %>%
+  left_join(sample_metadata, by = join_by(sample == sample))%>%
+  group_by(Location) %>%
+  dplyr::summarise_at(.vars = names(.)[2], .funs = c("Richness mean" = "mean", "Richness sd" = "sd"))
 
-#Richness
+neutral_mean <- alpha_div %>%
+  left_join(sample_metadata, by = join_by(sample == sample))%>%
+  group_by(Location) %>%
+  dplyr::summarise_at(.vars = names(.)[3], .funs = c("Neutral mean" = "mean", "Neutral sd" = "sd"))
+
+phylogenetic_mean <- alpha_div %>%
+  left_join(sample_metadata, by = join_by(sample == sample))%>%
+  group_by(Location) %>%
+  dplyr::summarise_at(.vars = names(.)[4], .funs = c("Phylogenetic mean" = "mean", "Phylogenetic sd" = "sd"))
+
+cbind(richness_mean, neutral_mean[, 2:3], phylogenetic_mean[, 2:3])%>%
+  tt()
+```
+```{r}
+alpha_colors <- c('#c4d7d1','#408892','#2d3749','#c04062','#6b3a59','#e08683')
+group_n <- alpha_div %>%
+  left_join(., sample_metadata, by = join_by(sample == sample))%>%
+  select(Location) %>%
+  pull() %>%
+  unique() %>%
+  length()
+
+#pdf("figures/diversity_location.pdf",width=20, height=9)
 alpha_div %>%
   pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
   left_join(., sample_metadata, by = join_by(sample == sample)) %>%
-  filter(!is.na(Location)) %>%
-  filter(metric=="richness") %>%
-      ggplot(aes(y = value, x = Origin, group=Origin, color=Origin, fill=Origin)) +
-      geom_boxplot(outlier.shape = NA) +
-      geom_jitter(alpha=0.5) +
-      scale_color_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          values=c("#6A9AC3","#F3B942")) +
-      scale_fill_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          values=c("#6A9AC350","#F3B94250")) +
-      facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
-      coord_cartesian(xlim = c(1, NA)) +
-      theme_classic() +
-      theme(
+  mutate(metric=factor(metric,levels=c("richness","neutral","phylogenetic","functional"))) %>%
+  ggplot(aes(y = value, x = Location, group=Location,color=Location,fill=Location)) +
+  geom_boxplot(outlier.shape = NA, show.legend = FALSE) +
+  geom_jitter(alpha=0.5) +
+  scale_color_manual(values = alpha_colors[c(1:group_n)]) +
+  scale_fill_manual(values = paste0(alpha_colors[c(1:group_n)], "50")) +
+  facet_wrap(. ~ metric, scales = "free", ncol=4) +
+  coord_cartesian(xlim = c(1, NA)) +
+  theme_classic() +
+  theme(
+    axis.ticks.x = element_blank(),
+        strip.text.x = element_text(size = 12, color="black",face="bold"),
         strip.background = element_blank(),
         panel.grid.minor.x = element_line(size = .1, color = "grey"),
         axis.title.x = element_blank(),
         axis.title.y = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1)
-      )
-
-#Neutral
-alpha_div %>%
-  pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
-  left_join(., sample_metadata, by = join_by(sample == sample)) %>%
-  filter(!is.na(Location)) %>%
-  filter(metric=="neutral") %>%
-      ggplot(aes(y = value, x = Origin, group=Origin, color=Origin, fill=Origin)) +
-      geom_boxplot(outlier.shape = NA) +
-      geom_jitter(alpha=0.5) +
-      scale_color_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          values=c("#6A9AC3","#F3B942")) +
-      scale_fill_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          values=c("#6A9AC350","#F3B94250")) +
-      facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
-      coord_cartesian(xlim = c(1, NA)) +
-      theme_classic() +
-      theme(
-        strip.background = element_blank(),
-        panel.grid.minor.x = element_line(size = .1, color = "grey"),
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1)
-      )
-
-#Phylogenetic
-alpha_div %>%
-  pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
-  left_join(., sample_metadata, by = join_by(sample == sample)) %>%
-  filter(!is.na(Location)) %>%
-  filter(metric=="phylogenetic") %>%
-      ggplot(aes(y = value, x = Origin, group=Origin, color=Origin, fill=Origin)) +
-      geom_boxplot(outlier.shape = NA) +
-      geom_jitter(alpha=0.5) +
-      scale_color_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          values=c("#6A9AC3","#F3B942")) +
-      scale_fill_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          values=c("#6A9AC350","#F3B94250")) +
-      facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
-      coord_cartesian(xlim = c(1, NA)) +
-      theme_classic() +
-      theme(
-        strip.background = element_blank(),
-        panel.grid.minor.x = element_line(size = .1, color = "grey"),
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1)
-      )
-
-#Functional
-alpha_div %>%
-  pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
-  left_join(., sample_metadata, by = join_by(sample == sample)) %>%
-  filter(!is.na(Location)) %>%
-  filter(metric=="functional") %>%
-      ggplot(aes(y = value, x = Origin, group=Origin, color=Origin, fill=Origin)) +
-      geom_boxplot(outlier.shape = NA) +
-      geom_jitter(alpha=0.5) +
-      scale_color_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          values=c("#6A9AC3","#F3B942")) +
-      scale_fill_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          values=c("#6A9AC350","#F3B94250")) +
-      facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
-      coord_cartesian(xlim = c(1, NA)) +
-      theme_classic() +
-      theme(
-        strip.background = element_blank(),
-        panel.grid.minor.x = element_line(size = .1, color = "grey"),
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1)
-      )
+        axis.text.x = element_blank(),
+        legend.text=element_text(size=10),
+        legend.title = element_text(size=12))+
+    guides(fill = guide_legend(override.aes = list(size=3)))
+#dev.off()
 ```
 
-## Mixed models 
 
-```{r model_rich, comment="", message=FALSE, warning=FALSE}
+### Mixed models 
+
+***Richness***
+```{r model_rich, comment="", echo=FALSE, message=FALSE, warning=FALSE}
 library(MASS)
 alpha_div_meta <- alpha_div %>%
   left_join(sample_metadata, by = join_by(sample == sample))
@@ -904,6 +1033,7 @@ emmeans(Modelq0_Loca, pairwise ~ Location)
 detach("package:MASS", unload = TRUE)
 ```
 
+***Neutral***
 ```{r model_neutral, comment="", message=FALSE, warning=FALSE}
 #Modelq1_all <- lm(formula = neutral ~ Location+Age+F.M+Bites+Hisses+Retreats+Vocalization+Acceptance+Sedating+Healthy+Dry_skin+Stiff+Agile, data = alpha_div_meta)
 #anova(Modelq1_all)
@@ -913,6 +1043,7 @@ r.squaredGLMM(Modelq1_Loca)
 emmeans(Modelq1_Loca, pairwise ~ Location)
 ```
 
+***Phylogenetic***
 ```{r model_phylo, comment="", message=FALSE, warning=FALSE}
 Modelq1p_Loca <- lm(formula = phylogenetic ~ Location, data = alpha_div_meta) 
 anova(Modelq1p_Loca)
@@ -920,6 +1051,7 @@ r.squaredGLMM(Modelq1p_Loca)
 emmeans(Modelq1p_Loca, pairwise ~ Location)
 ```
 
+***Functional***
 ```{r model_funct, comment="", message=FALSE, warning=FALSE}
 Modelq1F_Loca <- lm(formula = functional ~ Location, data = alpha_div_meta) 
 anova(Modelq1F_Loca)
@@ -927,13 +1059,165 @@ r.squaredGLMM(Modelq1F_Loca)
 emmeans(Modelq1F_Loca, pairwise ~ Location)
 ```
 
+## By behaviour and location
+### Plots
+
+***Richness***
+
+```{r alpha_div_rich_boxplot, comment="", message=FALSE, warning=FALSE, fig.height=3, fig.width=10, fig.fullwidth=TRUE}
+alpha_div %>%
+  pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
+  left_join(., sample_metadata, by = join_by(sample == sample)) %>%
+  filter(!is.na(Location)) %>%
+  filter(metric=="richness") %>%
+      ggplot(aes(y = value, x = Condition, group=Condition, color=Condition, fill=Condition)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha=0.5) +
+      scale_color_manual(name="Condition",
+          breaks=c("Domestic","Feral"),
+          values=c("#6A9AC3","#F3B942")) +
+      scale_fill_manual(name="Condition",
+          breaks=c("Domestic","Feral"),
+          values=c("#6A9AC350","#F3B94250")) +
+      facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
+      coord_cartesian(xlim = c(1, NA)) +
+      theme_classic() +
+      theme(
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_line(size = .1, color = "grey"),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1)
+      )
+```
+
+***Neutral***
+```{r alpha_div_neutral_boxplot, comment="", message=FALSE, warning=FALSE, fig.height=3, fig.width=10, fig.fullwidth=TRUE}
+#pdf("figures/alpha_q1n_behaviour.pdf",width=9, height=5)
+alpha_div %>%
+  pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
+  left_join(., sample_metadata, by = join_by(sample == sample)) %>%
+  filter(!is.na(Location)) %>%
+  filter(metric=="neutral") %>%
+      ggplot(aes(y = value, x = Condition, group=Condition, color=Condition, fill=Condition)) +
+      geom_boxplot(outlier.shape = NA, show.legend = FALSE) +
+      geom_jitter(alpha=0.5, show.legend = FALSE) +
+      scale_color_manual(name="Condition",
+          breaks=c("Domestic","Feral"),
+          values=c("#6A9AC3","#F3B942")) +
+      scale_fill_manual(name="Condition",
+          breaks=c("Domestic","Feral"),
+          values=c("#6A9AC350","#F3B94250")) +
+      facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
+      coord_cartesian(xlim = c(1, NA)) +
+      theme_classic() +
+      theme(
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_line(size = .1, color = "grey"),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+      )
+#dev.off()
+```
+
+***Phylogenetic***
+```{r alpha_div_phylo_boxplot, comment="", message=FALSE, warning=FALSE, fig.height=3, fig.width=10, fig.fullwidth=TRUE}
+
+#pdf("figures/alpha_q1p_behaviour.pdf",width=9, height=5)
+alpha_div %>%
+  pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
+  left_join(., sample_metadata, by = join_by(sample == sample)) %>%
+  filter(!is.na(Location)) %>%
+  filter(metric=="phylogenetic") %>%
+      ggplot(aes(y = value, x = Condition, group=Condition, color=Condition, fill=Condition)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha=0.5, show.legend = FALSE) +
+      scale_color_manual(name="Condition",
+          breaks=c("Domestic","Feral"),
+          values=c("#6A9AC3","#F3B942")) +
+      scale_fill_manual(name="Condition",
+          breaks=c("Domestic","Feral"),
+          values=c("#6A9AC350","#F3B94250")) +
+      facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
+      coord_cartesian(xlim = c(1, NA)) +
+      theme_classic() +
+      theme(
+         axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_line(size = .1, color = "grey"),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank()
+      )
+#dev.off()
+```
+
+***Functional***
+```{r alpha_div_func_boxplot, comment="", message=FALSE, warning=FALSE, fig.height=3, fig.width=10, fig.fullwidth=TRUE}
+
+alpha_div %>%
+  pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
+  left_join(., sample_metadata, by = join_by(sample == sample)) %>%
+  filter(!is.na(Location)) %>%
+  filter(metric=="functional") %>%
+      ggplot(aes(y = value, x = Condition, group=Condition, color=Condition, fill=Condition)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(alpha=0.5) +
+      scale_color_manual(name="Condition",
+          breaks=c("Domestic","Feral"),
+          values=c("#6A9AC3","#F3B942")) +
+      scale_fill_manual(name="Condition",
+          breaks=c("Domestic","Feral"),
+          values=c("#6A9AC350","#F3B94250")) +
+      facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
+      coord_cartesian(xlim = c(1, NA)) +
+      theme_classic() +
+      theme(
+        strip.background = element_blank(),
+        panel.grid.minor.x = element_line(size = .1, color = "grey"),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1)
+      )
+```
+
+### Mixed models 
+
+***Richness***
+```{r}
+Model_richness <- glmer.nb(richness ~ Origin+F.M+(1|Location), data = alpha_div_meta)
+summary(Model_richness)
+```
+
+***Neutral***
+```{r}
+Model_neutral <- lme(fixed = neutral ~ Origin+F.M, data = alpha_div_meta,
+               random = ~ 1 | Location)#log(seq_depth)+
+summary(Model_neutral)
+```
+
+***Phylogenetic***
+```{r}
+Model_phylo <- lme(fixed = phylogenetic ~ Origin+F.M, data = alpha_div_meta,
+               random = ~ 1 | Location)
+summary(Model_phylo)
+```
+
+***Functional***
+```{r}
+Model_func <- lme(fixed = functional ~ Origin+F.M, data = alpha_div_meta,
+               random = ~ 1 | Location)
+summary(Model_func)
+```
 
 <!--chapter:end:04_alpha_diversity.Rmd-->
 
 # Beta diversity
 
 ```{r load_data_beta}
-load("data/data.Rdata")
+load("data/data_arrange.Rdata")
 ```
 
 ```{r beta_div, comment="", message=FALSE, warning=FALSE}
@@ -962,68 +1246,50 @@ beta_q1f <- genome_counts_filt %>%
   hillpair(., q = 1, dist = dist)
 ```
 
-## Permanova
-
-```{r permanova, comment="", message=FALSE, warning=FALSE}
-#Richness
-betadisper(beta_q0n$C, sample_metadata$Origin) %>% permutest(., pairwise = TRUE) 
-adonis2(beta_q0n$C ~ Origin, 
-        data = sample_metadata %>% arrange(match(sample,labels(beta_q0n$C))), 
-        permutations = 999, 
-        strata = sample_metadata %>% arrange(match(sample,labels(beta_q0n$C))) %>% pull(Location)) %>%
-        broom::tidy() %>%
-        tt()
-
-#Neutral diversity
-betadisper(beta_q1n$C, sample_metadata$Origin) %>% permutest(., pairwise = TRUE) 
-adonis2(beta_q1n$C ~ Origin, 
-        data = sample_metadata %>% arrange(match(sample,labels(beta_q1n$C))), 
-        permutations = 999, 
-        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$C))) %>% pull(Location)) %>%
-        broom::tidy() %>%
-        tt()
-
-#Phylogenetic diversity
-betadisper(beta_q1p$C, sample_metadata$Origin) %>% permutest(., pairwise = TRUE) 
-adonis2(beta_q1p$C ~ Origin, 
-        data = sample_metadata %>% arrange(match(sample,labels(beta_q1p$C))), 
-        permutations = 999, 
-        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1p$C))) %>% pull(Location)) %>%
-        broom::tidy() %>%
-        tt()
-
-#Functional diversity
-betadisper(beta_q1f$C, sample_metadata$Origin) %>% permutest(., pairwise = TRUE) 
-adonis2(beta_q1f$C ~ Origin, 
-        data = sample_metadata %>% arrange(match(sample,labels(beta_q1f$C))), 
-        permutations = 999, 
-        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1f$C))) %>% pull(Location)) %>%
-        broom::tidy() %>%
-        tt()
+```{r save_beta, comment="", echo= FALSE, message=FALSE, warning=FALSE}
+save(beta_q0n, 
+     beta_q1n, 
+     beta_q1p, 
+     beta_q1f, 
+     file = "data/beta.Rdata")
 ```
 
-## Richness diversity plot
+```{r load_beta, comment="", echo= FALSE, message=FALSE, warning=FALSE}
+load("data/beta.Rdata")
+```
+## Location
+### Richness diversity
 
-```{r beta_div_nmds_neutral_plot, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
+```{r permanova_color, comment="", message=FALSE, warning=FALSE}
+set.seed(0606)
+locationcolors=c('#c4d7d1','#408892','#2d3749','#c04062','#6b3a59','#e08683')
+```
+
+```{r permanova_rich, comment="", message=FALSE, warning=FALSE}
+betadisper(beta_q0n$S, sample_metadata$Location) %>% permutest(., pairwise=TRUE) 
+adonis2(beta_q0n$S ~ Location, 
+        data = sample_metadata %>% arrange(match(sample,labels(beta_q0n$S))), 
+        permutations = 999) %>%
+        broom::tidy() %>%
+        tt()
+pairwise.adonis(beta_q0n$S, sample_metadata$Location, perm = 999)
+```
+```{r beta_div_nmds_rich_plot, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
+#pdf("figures/beta_q0_loca.pdf",width=9, height=5)
 beta_q0n$S %>%
   vegan::metaMDS(., trymax = 500, k = 2, trace=0) %>%
   vegan::scores() %>%
   as_tibble(., rownames = "sample") %>%
   dplyr::left_join(sample_metadata, by = join_by(sample == sample)) %>%
-  group_by(Origin,Location) %>%
+  group_by(Location) %>%
   mutate(x_cen = mean(NMDS1, na.rm = TRUE)) %>%
   mutate(y_cen = mean(NMDS2, na.rm = TRUE)) %>%
   ungroup() %>%
-  ggplot(aes(x = NMDS1, y = NMDS2, color = Origin, fill = Origin, shape = as.factor(Location))) +
-      scale_color_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          values=c("#6A9AC3","#F3B942")) +
-      scale_fill_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          values=c("#6A9AC350","#F3B94250")) +
+  ggplot(aes(x = NMDS1, y = NMDS2, color = Location, fill = Location)) +
     geom_point(size = 4) +
     #   stat_ellipse(aes(color = beta_q1n_nmds$Groups))+
-    geom_segment(aes(x = x_cen, y = y_cen, xend = NMDS1, yend = NMDS2), alpha = 0.9) +
+    geom_segment(aes(x = x_cen, y = y_cen, xend = NMDS1, yend = NMDS2), alpha = 0.9, show.legend = FALSE) +
+    scale_color_manual(values = locationcolors)+
     theme_classic() +
     theme(
       axis.text.x = element_text(size = 12),
@@ -1035,33 +1301,36 @@ beta_q0n$S %>%
       legend.text = element_text(size = 16),
       legend.title = element_text(size = 18),
       legend.position = "right", legend.box = "vertical"
-    ) +
-    labs(shape="Individual")
+    ) 
+#dev.off()
 ```
 
-
-## Neutral diversity plot
-
-```{r beta_div_nmds_phylo_plot, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
+### Neutral diversity
+```{r permanova_neutral, comment="", message=FALSE, warning=FALSE}
+betadisper(beta_q1n$S, sample_metadata$Location) %>% permutest(., pairwise=TRUE) 
+adonis2(beta_q1n$S ~ Location, 
+        data = sample_metadata %>% arrange(match(sample,labels(beta_q1n$S))), 
+        permutations = 999) %>%
+        broom::tidy() %>%
+        tt()
+pairwise.adonis(beta_q1n$S, sample_metadata$Location, perm = 999)
+```
+```{r beta_div_nmds_neutral_plot, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
+#pdf("figures/beta_q1n_loca.pdf",width=9, height=5)
 beta_q1n$S %>%
   vegan::metaMDS(., trymax = 500, k = 2, trace=0) %>%
   vegan::scores() %>%
   as_tibble(., rownames = "sample") %>%
   dplyr::left_join(sample_metadata, by = join_by(sample == sample)) %>%
-  group_by(Origin,Location) %>%
+  group_by(Location) %>%
   mutate(x_cen = mean(NMDS1, na.rm = TRUE)) %>%
   mutate(y_cen = mean(NMDS2, na.rm = TRUE)) %>%
   ungroup() %>%
-  ggplot(aes(x = NMDS1, y = NMDS2, color = Origin, fill = Origin, shape = as.factor(Location))) +
-      scale_color_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          values=c("#6A9AC3","#F3B942")) +
-      scale_fill_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          values=c("#6A9AC350","#F3B94250")) +
+  ggplot(aes(x = NMDS1, y = NMDS2, color = Location, fill = Location)) +
     geom_point(size = 4) +
     #   stat_ellipse(aes(color = beta_q1n_nmds$Groups))+
-    geom_segment(aes(x = x_cen, y = y_cen, xend = NMDS1, yend = NMDS2), alpha = 0.9) +
+    geom_segment(aes(x = x_cen, y = y_cen, xend = NMDS1, yend = NMDS2), alpha = 0.9, show.legend = FALSE) +
+  scale_color_manual(values = locationcolors)+
     theme_classic() +
     theme(
       axis.text.x = element_text(size = 12),
@@ -1073,8 +1342,271 @@ beta_q1n$S %>%
       legend.text = element_text(size = 16),
       legend.title = element_text(size = 18),
       legend.position = "right", legend.box = "vertical"
-    ) +
-    labs(shape="Individual")
+    ) 
+#dev.off()
+```
+
+### Phylogenetic diversity
+```{r permanova_phylo, comment="", message=FALSE, warning=FALSE}
+betadisper(beta_q1p$S, sample_metadata$Location) %>% permutest(., pairwise=TRUE) 
+adonis2(beta_q1p$S ~ Location, 
+        data = sample_metadata %>% arrange(match(sample,labels(beta_q1p$S))), 
+        permutations = 999) %>%
+        broom::tidy() %>%
+        tt()
+pairwise.adonis(beta_q1p$S, sample_metadata$Location, perm = 999)
+```
+```{r beta_div_nmds_phylo_plot, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
+#pdf("figures/beta_q1p_loca.pdf",width=9, height=5)
+beta_q1p$S %>%
+  vegan::metaMDS(., trymax = 500, k = 2, trace=0) %>%
+  vegan::scores() %>%
+  as_tibble(., rownames = "sample") %>%
+  dplyr::left_join(sample_metadata, by = join_by(sample == sample)) %>%
+  group_by(Location) %>%
+  mutate(x_cen = mean(NMDS1, na.rm = TRUE)) %>%
+  mutate(y_cen = mean(NMDS2, na.rm = TRUE)) %>%
+  ungroup() %>%
+  ggplot(aes(x = NMDS1, y = NMDS2, color = Location, fill = Location)) +
+    geom_point(size = 4) +
+    #   stat_ellipse(aes(color = beta_q1n_nmds$Groups))+
+    geom_segment(aes(x = x_cen, y = y_cen, xend = NMDS1, yend = NMDS2), alpha = 0.9, show.legend = FALSE) +
+    scale_color_manual(values = locationcolors)+
+    theme_classic() +
+    theme(
+      axis.text.x = element_text(size = 12),
+      axis.text.y = element_text(size = 12),
+      axis.title = element_text(size = 20, face = "bold"),
+      axis.text = element_text(face = "bold", size = 18),
+      panel.background = element_blank(),
+      axis.line = element_line(size = 0.5, linetype = "solid", colour = "black"),
+      legend.text = element_text(size = 16),
+      legend.title = element_text(size = 18),
+      legend.position = "right", legend.box = "vertical"
+    ) 
+#dev.off()
+```
+
+### Functional diversity
+```{r permanova_func, comment="", message=FALSE, warning=FALSE}
+betadisper(beta_q1f$S, sample_metadata$Location) %>% permutest(., pairwise=TRUE) 
+adonis2(beta_q1f$S ~ Location, 
+        data = sample_metadata %>% arrange(match(sample,labels(beta_q1f$S))), 
+        permutations = 999) %>%
+        broom::tidy() %>%
+        tt()
+pairwise.adonis(beta_q1f$S, sample_metadata$Location, perm = 999)
+
+```
+
+```{r beta_div_nmds_funct_plot, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
+#pdf("figures/beta_q1f_loca.pdf",width=9, height=5)
+beta_q1f$S %>%
+  vegan::metaMDS(., trymax = 500, k = 2, trace=0) %>%
+  vegan::scores() %>%
+  as_tibble(., rownames = "sample") %>%
+  dplyr::left_join(sample_metadata, by = join_by(sample == sample)) %>%
+  group_by(Location) %>%
+  mutate(x_cen = mean(NMDS1, na.rm = TRUE)) %>%
+  mutate(y_cen = mean(NMDS2, na.rm = TRUE)) %>%
+  ungroup() %>%
+  ggplot(aes(x = NMDS1, y = NMDS2, color = Location, fill = Location)) +
+    geom_point(size = 4) +
+    #   stat_ellipse(aes(color = beta_q1n_nmds$Groups))+
+    geom_segment(aes(x = x_cen, y = y_cen, xend = NMDS1, yend = NMDS2), alpha = 0.9, show.legend = FALSE) +
+    scale_color_manual(values = locationcolors)+
+    theme_classic() +
+    theme(
+      axis.text.x = element_text(size = 12),
+      axis.text.y = element_text(size = 12),
+      axis.title = element_text(size = 20, face = "bold"),
+      axis.text = element_text(face = "bold", size = 18),
+      panel.background = element_blank(),
+      axis.line = element_line(size = 0.5, linetype = "solid", colour = "black"),
+      legend.text = element_text(size = 16),
+      legend.title = element_text(size = 18),
+      legend.position = "right", legend.box = "vertical"
+    ) 
+#dev.off()
+```
+
+## Behaviour
+
+### Richness diversity
+```{r permanova_rich_behaviour, comment="", message=FALSE, warning=FALSE}
+betadisper(beta_q0n$S, sample_metadata$Origin) %>% permutest(., pairwise=TRUE) 
+adonis2(beta_q0n$S ~ Origin, 
+        data = sample_metadata %>% arrange(match(sample,labels(beta_q0n$S))), 
+        permutations = 999,
+        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$S))) %>% pull(Location)) %>%
+        broom::tidy() %>%
+        tt()
+pairwise.adonis(beta_q0n$S, sample_metadata$Origin, perm = 999)
+```
+
+```{r beta_div_nmds_rich_plot_behaviour, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
+beta_q0n$S %>%
+  vegan::metaMDS(., trymax = 500, k = 2, trace=0) %>%
+  vegan::scores() %>%
+  as_tibble(., rownames = "sample") %>%
+  dplyr::left_join(sample_metadata, by = join_by(sample == sample)) %>%
+  group_by(Origin) %>%
+  mutate(x_cen = mean(NMDS1, na.rm = TRUE)) %>%
+  mutate(y_cen = mean(NMDS2, na.rm = TRUE)) %>%
+  ungroup() %>%
+  ggplot(aes(x = NMDS1, y = NMDS2, color = Origin, fill = Origin)) +
+    geom_point(size = 4) +
+    #   stat_ellipse(aes(color = beta_q1n_nmds$Groups))+
+    geom_segment(aes(x = x_cen, y = y_cen, xend = NMDS1, yend = NMDS2), alpha = 0.9, show.legend = FALSE) +
+    theme_classic() +
+    theme(
+      axis.text.x = element_text(size = 12),
+      axis.text.y = element_text(size = 12),
+      axis.title = element_text(size = 20, face = "bold"),
+      axis.text = element_text(face = "bold", size = 18),
+      panel.background = element_blank(),
+      axis.line = element_line(size = 0.5, linetype = "solid", colour = "black"),
+      legend.text = element_text(size = 16),
+      legend.title = element_text(size = 18),
+      legend.position = "right", legend.box = "vertical"
+    ) 
+```
+
+### Neutral diversity
+```{r permanova_neutral_behaviour, comment="", message=FALSE, warning=FALSE}
+betadisper(beta_q1n$S, sample_metadata$Origin) %>% permutest(., pairwise=TRUE) 
+adonis2(beta_q1n$S ~ Origin, 
+        data = sample_metadata %>% arrange(match(sample,labels(beta_q1n$S))), 
+        permutations = 999,
+        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$S))) %>% pull(Location)) %>%
+        broom::tidy() %>%
+        tt()
+pairwise.adonis(beta_q1n$S, sample_metadata$Origin, perm = 999)
+```
+```{r beta_div_nmds_neutral_plot_behaviour, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
+beta_q1n$S %>%
+  vegan::metaMDS(., trymax = 500, k = 2, trace=0) %>%
+  vegan::scores() %>%
+  as_tibble(., rownames = "sample") %>%
+  dplyr::left_join(sample_metadata, by = join_by(sample == sample)) %>%
+  group_by(Origin) %>%
+  mutate(x_cen = mean(NMDS1, na.rm = TRUE)) %>%
+  mutate(y_cen = mean(NMDS2, na.rm = TRUE)) %>%
+  ungroup() %>%
+  ggplot(aes(x = NMDS1, y = NMDS2, color = Origin, fill = Origin)) +
+      scale_color_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          values=c("#6A9AC3","#F3B942")) +
+      scale_fill_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          values=c("#6A9AC350","#F3B94250")) +
+    geom_point(size = 4) +
+    #   stat_ellipse(aes(color = beta_q1n_nmds$Groups))+
+    geom_segment(aes(x = x_cen, y = y_cen, xend = NMDS1, yend = NMDS2), alpha = 0.9, show.legend = FALSE) +
+    theme_classic() +
+    theme(
+      axis.text.x = element_text(size = 12),
+      axis.text.y = element_text(size = 12),
+      axis.title = element_text(size = 20, face = "bold"),
+      axis.text = element_text(face = "bold", size = 18),
+      panel.background = element_blank(),
+      axis.line = element_line(size = 0.5, linetype = "solid", colour = "black"),
+      legend.text = element_text(size = 16),
+      legend.title = element_text(size = 18),
+      legend.position = "right", legend.box = "vertical"
+    ) 
+```
+
+### Phylogenetic diversity
+```{r permanova_phylo_behaviour, comment="", message=FALSE, warning=FALSE}
+betadisper(beta_q1p$S, sample_metadata$Origin) %>% permutest(., pairwise=TRUE) 
+adonis2(beta_q1p$S ~ Origin, 
+        data = sample_metadata %>% arrange(match(sample,labels(beta_q1p$S))), 
+        permutations = 999,
+        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$S))) %>% pull(Location)) %>%
+        broom::tidy() %>%
+        tt()
+pairwise.adonis(beta_q1p$S, sample_metadata$Origin, perm = 999)
+```
+```{r beta_div_nmds_phylo_plot_behaviour, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
+beta_q1p$S %>%
+  vegan::metaMDS(., trymax = 500, k = 2, trace=0) %>%
+  vegan::scores() %>%
+  as_tibble(., rownames = "sample") %>%
+  dplyr::left_join(sample_metadata, by = join_by(sample == sample)) %>%
+  group_by(Origin) %>%
+  mutate(x_cen = mean(NMDS1, na.rm = TRUE)) %>%
+  mutate(y_cen = mean(NMDS2, na.rm = TRUE)) %>%
+  ungroup() %>%
+  ggplot(aes(x = NMDS1, y = NMDS2, color = Origin, fill = Origin)) +
+      scale_color_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          values=c("#6A9AC3","#F3B942")) +
+      scale_fill_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          values=c("#6A9AC350","#F3B94250")) +
+    geom_point(size = 4) +
+    #   stat_ellipse(aes(color = beta_q1n_nmds$Groups))+
+    geom_segment(aes(x = x_cen, y = y_cen, xend = NMDS1, yend = NMDS2), alpha = 0.9, show.legend = FALSE) +
+    theme_classic() +
+    theme(
+      axis.text.x = element_text(size = 12),
+      axis.text.y = element_text(size = 12),
+      axis.title = element_text(size = 20, face = "bold"),
+      axis.text = element_text(face = "bold", size = 18),
+      panel.background = element_blank(),
+      axis.line = element_line(size = 0.5, linetype = "solid", colour = "black"),
+      legend.text = element_text(size = 16),
+      legend.title = element_text(size = 18),
+      legend.position = "right", legend.box = "vertical"
+    ) 
+```
+
+### Functional diversity
+```{r permanova_func_behaviour, comment="", message=FALSE, warning=FALSE}
+betadisper(beta_q1f$S, sample_metadata$Origin) %>% permutest(., pairwise=TRUE) 
+adonis2(beta_q1f$S ~ Origin, 
+        data = sample_metadata %>% arrange(match(sample,labels(beta_q1f$S))), 
+        permutations = 999,
+        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$S))) %>% pull(Location)) %>%
+        broom::tidy() %>%
+        tt()
+pairwise.adonis(beta_q1f$S, sample_metadata$Origin, perm = 999)
+
+```
+
+```{r beta_div_nmds_func_plot_behaviour, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
+beta_q1f$S %>%
+  vegan::metaMDS(., trymax = 500, k = 2, trace=0) %>%
+  vegan::scores() %>%
+  as_tibble(., rownames = "sample") %>%
+  dplyr::left_join(sample_metadata, by = join_by(sample == sample)) %>%
+  group_by(Origin) %>%
+  mutate(x_cen = mean(NMDS1, na.rm = TRUE)) %>%
+  mutate(y_cen = mean(NMDS2, na.rm = TRUE)) %>%
+  ungroup() %>%
+  ggplot(aes(x = NMDS1, y = NMDS2, color = Origin, fill = Origin)) +
+      scale_color_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          values=c("#6A9AC3","#F3B942")) +
+      scale_fill_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          values=c("#6A9AC350","#F3B94250")) +
+    geom_point(size = 4) +
+    #   stat_ellipse(aes(color = beta_q1n_nmds$Groups))+
+    geom_segment(aes(x = x_cen, y = y_cen, xend = NMDS1, yend = NMDS2), alpha = 0.9, show.legend = FALSE) +
+    theme_classic() +
+    theme(
+      axis.text.x = element_text(size = 12),
+      axis.text.y = element_text(size = 12),
+      axis.title = element_text(size = 20, face = "bold"),
+      axis.text = element_text(face = "bold", size = 18),
+      panel.background = element_blank(),
+      axis.line = element_line(size = 0.5, linetype = "solid", colour = "black"),
+      legend.text = element_text(size = 16),
+      legend.title = element_text(size = 18),
+      legend.position = "right", legend.box = "vertical"
+    ) 
 ```
 
 <!--chapter:end:05_beta_diversity.Rmd-->
@@ -1084,7 +1616,7 @@ beta_q1n$S %>%
 ## Setup
 
 ```{r load_data_hmsc_setup}
-load("data/data.Rdata")
+load("data/data_arrange.Rdata")
 ```
 
 ```{r hmsc_input, warning=FALSE, comments="", message=FALSE}
@@ -1283,7 +1815,7 @@ sbatch exe_model1_250_1.sh
 ## Load data
 
 ```{r load_data_hmsc_analysis}
-load("data/data.Rdata")
+load("data/data_arrange.Rdata")
 load("hmsc/fit_model1_250_10.Rdata")
 ```
 
@@ -1473,6 +2005,7 @@ getPostEstimate(hM=m, parName="Beta")$support %>%
     dplyr::select(genome,phylum,class,order,family,species,value) %>%
     arrange(phylum,class,family,species)%>%
   paged_table()
+
 ```
 
 #### Estimate - support plot
@@ -1502,6 +2035,7 @@ phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI
   dplyr::select(colors) %>%
   pull()
 
+#pdf("figures/sig_Mags_violin.pdf",width=10, height=8)
 inner_join(estimate,support,by=join_by(genome==genome)) %>%
     mutate(significance=ifelse(support >= 0.9 | support <= 0.1,1,0)) %>%
     mutate(support=ifelse(mean<0,1-support,support)) %>%
@@ -1515,6 +2049,7 @@ inner_join(estimate,support,by=join_by(genome==genome)) %>%
       labs(x = "Beta regression coefficient", y = "Posterior probability") +
       theme_minimal()+
        theme(legend.position = "none")
+#dev.off()
 ```
 
 
@@ -1568,6 +2103,86 @@ grid.arrange(grobs = list(matrix,vtree),
                                    c(2,1,1,1,1,1,1,1,1,1,1,1),
                                    c(2,1,1,1,1,1,1,1,1,1,1,1),
                                    c(2,1,1,1,1,1,1,1,1,1,1,1)))
+```
+
+
+
+```{r sig_mag_Table, warning=FALSE, echo=FALSE, comments="", message=FALSE}
+# Overall species prediction
+
+Test <- getPostEstimate(hM=m, parName="Beta")$support %>%
+    as.data.frame() %>%
+    mutate(variable=m$covNames) %>%
+    pivot_longer(!variable, names_to = "genome", values_to = "value") %>%
+    mutate(trend = case_when(
+          value >= support ~ "Positive",
+          value <= negsupport ~ "Negative",
+          TRUE ~ "Neutral")) %>%
+    filter(variable=="originTame")
+
+pred_species <- constructGradient(m, 
+                      focalVariable = "origin", 
+                      non.focalVariables = 1, 
+                      ngrid=gradientlength) %>%
+             predict(m, Gradient = ., expected = TRUE) %>%
+             as.data.frame() %>%
+             mutate(origin=c("Tame","Feral")) %>%
+             pivot_longer(!origin, names_to = "genome", values_to = "value") %>%
+             mutate(genome = sub("(.*\\..*\\.)[^.]+.*", "\\1", genome)) %>% #remove iteration suffix
+             mutate(genome =  sub("\\.$", "", genome)) %>% 
+   left_join(Test, by=join_by(genome==genome))%>%
+  filter(trend != "Neutral")
+```
+```{r sig_mag_plot, comment="", echo=FALSE, message=FALSE, warning=FALSE, fig.height=8, fig.width=10, fig.fullwidth=TRUE}
+phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
+    mutate(phylum=str_remove_all(phylum, "p__")) %>%
+    right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
+    filter(genome %in% genome_tree$tip.label) %>%
+    arrange(match(genome, genome_tree$tip.label)) %>%
+    mutate(phylum = factor(phylum, levels = unique(phylum))) %>%
+    column_to_rownames(var = "genome") %>%
+    dplyr::select(phylum)
+
+colors_alphabetic <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
+    mutate(phylum=str_remove_all(phylum, "p__")) %>%
+    right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
+    filter(genome %in% genome_tree$tip.label) %>%
+    arrange(match(genome, genome_tree$tip.label)) %>%
+     dplyr::select(phylum, colors) %>%
+    unique() %>%
+    arrange(phylum) %>%
+    dplyr::select(colors) %>%
+    pull()
+
+
+genome_metadata1<- genome_metadata
+genome_metadata1 <- genome_metadata1 %>%  
+    mutate(family = coalesce(family, paste('Unclassified', order)),
+           genus = coalesce(genus, 
+                              if_else(grepl('^Unclassified', family),
+                                      family, paste('Unclassified', family))))
+
+
+
+
+#pdf("figures/sig_Mags.pdf",width=9, height=10)
+pred_species %>%
+      pivot_wider(names_from = origin, values_from = value.x) %>%
+      unnest(c(`Tame`, `Feral`)) %>%
+      mutate(diff_dom.feral = `Tame` - `Feral`) %>%
+      select(genome, diff_dom.feral) %>%
+      left_join(genome_metadata1, by=join_by(genome==genome)) %>%
+      mutate(genome= factor(genome, levels=genome_tree$tip.label)) %>%
+      ggplot(., aes(y=forcats::fct_reorder(genus,diff_dom.feral), x=diff_dom.feral, fill=phylum, color=phylum)) +
+            geom_boxplot(outlier.shape = NA) +
+          scale_color_manual(values=colors_alphabetic)+
+            scale_fill_manual(values=colors_alphabetic)+
+          geom_vline(xintercept = 0)+
+          theme_classic()+
+  labs(x = "Log-abundance difference", y = "Genera")
+#dev.off()
+
+
 ```
 
 #### Predict responses (origin)
@@ -1644,6 +2259,7 @@ element_predictions <- map_dfc(community_elements, function(mat) {
         negative_support = sum(value < 0)/1000) %>%
       arrange(-positive_support)
 ```
+
 ##### Positive associated functions at element level
 
 ```{r hmsc_origin_element_significant, warning=FALSE, comments="", message=FALSE}
@@ -1663,7 +2279,7 @@ element_predictions %>%
 
 ```
 
-```{r community_weighed_pos, warning=FALSE, comments="", message=FALSE}
+```{r community_weighed_pos, warning=FALSE, comments="", message=FALSE, eval=FALSE}
 #Get community-weighed average GIFTs per sample
 genome_counts_row <- genome_counts %>%
   mutate_at(vars(-genome),~./sum(.)) %>% 
@@ -1704,7 +2320,7 @@ element_gift_filt %>%
   rownames_to_column(., "Elements")  %>%
   left_join(.,uniqueGIFT_db[c(1,3)],by = join_by(Elements == Code_element))
 ```
-```{r elements_post_plot, comment="", echo=FALSE, message=FALSE, warning=FALSE}
+```{r elements_post_plot, comment="", echo=FALSE, message=FALSE, warning=FALSE, eval=FALSE}
 element_gift_names <- element_gift_filt%>%
   select(-Origin)%>%
    t() %>%
@@ -1754,7 +2370,7 @@ element_predictions %>%
   paged_table()
 ```
 
-```{r community_weighed_neg, warning=FALSE, comments="", message=FALSE}
+```{r community_weighed_neg, warning=FALSE, comments="", message=FALSE, eval=FALSE}
 element_gift_t <- GIFTs_elements_community  %>% 
   t() %>%
 #  row_to_names(row_number = 1) %>%
@@ -1788,7 +2404,7 @@ element_gift_filt %>%
   rownames_to_column(., "Elements")  %>%
   left_join(.,uniqueGIFT_db[c(1,3)],by = join_by(Elements == Code_element))
 ```
-```{r elements_neg_plot, comment="", echo=FALSE, message=FALSE, warning=FALSE}
+```{r elements_neg_plot, comment="", echo=FALSE, message=FALSE, warning=FALSE, eval=FALSE}
 element_gift_names <- element_gift_filt%>%
   select(-Origin)%>%
    t() %>%
@@ -1807,11 +2423,7 @@ element_gift_names <- element_gift_filt%>%
   left_join(., sample_metadata[c(4,9)], by = join_by(sample == sample))
 
 element_gift_names$Origin <- factor(element_gift_names$Origin, levels=c("Tame", "Feral"))
-<<<<<<< HEAD
 colNames <- names(element_gift_names)[2:26]
-=======
-colNames <- names(element_gift_names)[2:28]
->>>>>>> 07d9ceaa25b8b3c70402bd9fb4f7adeed7a505f4
 for(i in colNames){
   plt <- ggplot(element_gift_names, aes(x=Origin, y=.data[[i]], color = Origin, fill=Origin)) +
     geom_boxplot(alpha = 0.2, outlier.shape = NA, width = 0.3, show.legend = FALSE) +
@@ -1827,6 +2439,7 @@ for(i in colNames){
   print(plt)
 }
 ```
+
 ```{r hmsc_origin_significant_plot, warning=FALSE, comments="", message=FALSE}
 
 positive <- element_predictions %>%
@@ -1973,10 +2586,11 @@ bind_rows(positive,negative) %>%
 ```
 
 ### Sex
+#### Positively associated genomes male cats
 
-#### Negatively associated genomes with male cats
-
-```{r hmsc_positive_sex, warning=FALSE, comments="", message=FALSE}
+```{r hmsc_negative_sex, warning=FALSE, comments="", message=FALSE}
+# Select modelchain of interest
+load("hmsc/fit_model1_250_10.Rdata")
 # Compute variance partitioning
 varpart=computeVariancePartitioning(m)
 
@@ -2017,16 +2631,38 @@ getPostEstimate(hM=m, parName="Beta")$support %>%
           value >= support ~ "Positive",
           value <= negsupport ~ "Negative",
           TRUE ~ "Neutral")) %>%
+    filter(variable=="sexMale", trend=="Positive") %>%
+    arrange(value) %>%
+    left_join(genome_metadata,by=join_by(genome==genome)) %>%
+    dplyr::select(genome,phylum,class,order,family,species,value) %>%
+    arrange(phylum,class,family,species)%>%
+  paged_table()
+```
+
+#### Negatively associated genomes with male cats
+
+```{r hmsc_positive_sex, warning=FALSE, comments="", message=FALSE}
+
+getPostEstimate(hM=m, parName="Beta")$support %>%
+    as.data.frame() %>%
+    mutate(variable=m$covNames) %>%
+    pivot_longer(!variable, names_to = "genome", values_to = "value") %>%
+    mutate(trend = case_when(
+          value >= support ~ "Positive",
+          value <= negsupport ~ "Negative",
+          TRUE ~ "Neutral")) %>%
     filter(variable=="sexMale", trend=="Negative") %>%
     arrange(-value) %>%
     left_join(genome_metadata,by=join_by(genome==genome)) %>%
     dplyr::select(genome,phylum,class,order,family,species,value) %>%
-    arrange(phylum, class, family)%>%
+    arrange(phylum, class, order, family)%>%
+    group_by(phylum, family) %>%
+ #   summarise(count=n())
   paged_table()
 ```
 
 #### Estimate - support plot
-```{r hmsc_negative_sex, warning=FALSE, comments="", message=FALSE}
+```{r hmsc_supo_sex, warning=FALSE, comments="", message=FALSE}
 estimate <- getPostEstimate(hM=m, parName="Beta")$mean %>%
     as.data.frame() %>%
     mutate(variable=m$covNames) %>%
@@ -2065,21 +2701,27 @@ inner_join(estimate,support,by=join_by(genome==genome)) %>%
       labs(x = "Beta regression coefficient", y = "Posterior probability") +
       theme_minimal()+
        theme(legend.position = "none")
+
+###
+inner_join(estimate,support,by=join_by(genome==genome)) %>%
+  group_by(genome) %>% 
+      summarise(mean,
+        p1 = quantile(mean, probs = 0.1),
+        p9 = quantile(mean, probs = 0.9),
+        positive_support = sum(mean > 0)/1000,
+        negative_support = sum(mean < 0)/1000)
+###
 ```
 
 
 #### Predict responses
 
 ```{r hmsc_predictions_sex, warning=FALSE, comments="", message=FALSE}
-
-# Select modelchain of interest
-load("hmsc/fit_model1_250_10.Rdata")
-
 gradient = c("Male","Female","Unknown")
 gradientlength = length(gradient)
 
 #Treatment-specific gradient predictions
-pred <- constructGradient(m, 
+pred_sex <- constructGradient(m, 
                       focalVariable = "sex", 
                       non.focalVariables = list(logseqdepth=list(1),location=list(1))) %>%
             predict(m, Gradient = ., expected = TRUE) %>%
@@ -2097,7 +2739,7 @@ elements_table <- genome_gifts %>%
     to.elements(., GIFT_db) %>%
     as.data.frame()
 
-community_elements <- pred %>%
+community_elements_sex <- pred_sex %>%
   group_by(sex, genome) %>%
   mutate(row_id = row_number()) %>%
   pivot_wider(names_from = genome, values_from = value) %>%
@@ -2121,7 +2763,7 @@ calculate_slope <- function(x) {
   coef(lm_fit)[2]
 }
 
-element_predictions <- map_dfc(community_elements, function(mat) {
+element_predictions_sex <- map_dfc(community_elements_sex, function(mat) {
       mat %>%
         column_to_rownames(var = "sex") %>%
         t() %>%
@@ -2131,7 +2773,7 @@ element_predictions <- map_dfc(community_elements, function(mat) {
         dplyr::select(slope) }) %>%
       t() %>%
       as.data.frame() %>%
-      set_names(colnames(community_elements[[1]])[-1]) %>%
+      set_names(colnames(community_elements_sex[[1]])[-1]) %>%
       rownames_to_column(var="iteration") %>%
       pivot_longer(!iteration, names_to="trait",values_to="value") %>%
       group_by(trait) %>%
@@ -2152,7 +2794,7 @@ unique_funct_db<- GIFT_db[c(2,4,5,6)] %>%
   distinct(Code_element, .keep_all = TRUE)
 
 
-element_predictions %>%
+element_predictions_sex %>%
   filter(mean >0) %>%
   arrange(-positive_support) %>%
   filter(positive_support>=0.9) %>%
@@ -2163,7 +2805,7 @@ element_predictions %>%
 ##### Negatively associated functions at element level
 
 ```{r hmsc_sex_element_significant_neg, warning=FALSE, comments="", message=FALSE}
-element_predictions %>%
+element_predictions_sex %>%
   filter(mean <0) %>%
   arrange(-negative_support) %>%
   filter(negative_support>=0.9) %>%
@@ -2171,25 +2813,25 @@ element_predictions %>%
   arrange(Domain,Function)
 ```
 
-```{r hmsc_sex_significant_plot, warning=FALSE, comments="", message=FALSE}
+```{r hmsc_sex_significant_plot, warning=FALSE, comments="", message=FALSE, fig.height=10, fig.width=8, fig.fullwidth=TRUE}
 
-positive <- element_predictions %>%
+positive_sex <- element_predictions_sex %>%
   filter(mean >0) %>%
   arrange(mean) %>%
   filter(positive_support>=0.9) %>%
   dplyr::select(-negative_support) %>%
   rename(support=positive_support)
 
-negative <- element_predictions %>%
+negative_sex <- element_predictions_sex %>%
   filter(mean <0) %>%
   arrange(mean) %>%
   filter(negative_support>=0.9) %>%
   dplyr::select(-positive_support) %>%
   rename(support=negative_support)
 
-bind_rows(positive,negative) %>%
+bind_rows(positive_sex,negative_sex) %>%
   left_join(GIFT_db,by=join_by(trait==Code_element)) %>%
-  mutate(trait=factor(trait,levels=c(rev(positive$trait),rev(negative$trait)))) %>%
+  mutate(trait=factor(trait,levels=c(rev(positive_sex$trait),rev(negative_sex$trait)))) %>%
   ggplot(aes(x=mean, y=fct_rev(trait), xmin=p1, xmax=p9, color=Function)) +
       geom_point() +
       geom_errorbar() +
@@ -2200,6 +2842,26 @@ bind_rows(positive,negative) %>%
       labs(x="Regression coefficient",y="Functional trait")
 ```
 
+```{r hmsc_origin_ele_significant_plot1, warning=FALSE, comments="", message=FALSE, fig.height=10, fig.width=8, fig.fullwidth=TRUE}
+#pdf("figures/Functional_sex.pdf",width=9, height=10)
+table <- bind_rows(positive_sex,negative_sex) %>%
+  left_join(unique_funct_db,by=join_by(trait==Code_element)) #%>%
+#  mutate(trait=factor(trait,levels=c(rev(positive_sex$trait),rev(negative_sex$trait)))) 
+table$function_element<- paste(table$Function,table$Element, sep="_")
+
+table %>%
+  mutate(function_element=factor(function_element,levels=c(table$function_element))) %>%
+  ggplot(aes(x=mean, y=fct_rev(function_element), xmin=p1, xmax=p9, color=Function)) +
+      geom_point(show.legend = FALSE) +
+      geom_errorbar(show.legend = FALSE) +
+#      xlim(c(-0.04,0.04)) +
+      geom_vline(xintercept=0) +
+#      scale_color_manual(values = c("#debc14","#440526","#dc7c17","#172742","#debc14","#440526","#dc7c17","#172742","#357379","#6c7e2c","#d8dc69","#774d35","#db717d")) +
+      theme_minimal() +
+      labs(x="Regression coefficient",y="Functional trait")
+#dev.off()
+```
+
 #### Function level
 
 ```{r hmsc_sex_function_predictions, warning=FALSE, comments="", message=FALSE}
@@ -2207,7 +2869,7 @@ functions_table <- elements_table %>%
     to.functions(., GIFT_db) %>%
     as.data.frame()
 
-community_functions <- pred %>%
+community_functions_sex <- pred_sex %>%
   group_by(sex, genome) %>%
   mutate(row_id = row_number()) %>%
   pivot_wider(names_from = genome, values_from = value) %>%
@@ -2234,7 +2896,7 @@ calculate_slope <- function(x) {
   coef(lm_fit)[2]
 }
 
-function_predictions <- map_dfc(community_functions, function(mat) {
+function_predictions_sex <- map_dfc(community_functions_sex, function(mat) {
       mat %>%
         column_to_rownames(var = "sex") %>%
         t() %>%
@@ -2244,7 +2906,7 @@ function_predictions <- map_dfc(community_functions, function(mat) {
         dplyr::select(slope) }) %>%
       t() %>%
       as.data.frame() %>%
-      set_names(colnames(community_functions[[1]])[-1]) %>%
+      set_names(colnames(community_functions_sex[[1]])[-1]) %>%
       rownames_to_column(var="iteration") %>%
       pivot_longer(!iteration, names_to="trait",values_to="value") %>%
       group_by(trait) %>%
@@ -2256,13 +2918,13 @@ function_predictions <- map_dfc(community_functions, function(mat) {
       arrange(-positive_support)
 
 # Positively associated
-function_predictions %>%
+function_predictions_sex %>%
   filter(mean >0) %>%
   arrange(-positive_support) %>%
   paged_table()
 
 # Negatively associated
-function_predictions %>%
+function_predictions_sex %>%
   filter(mean <0) %>%
   arrange(-negative_support) %>%
   paged_table()
@@ -2271,32 +2933,746 @@ function_predictions %>%
 
 ```{r hmsc_sex_function_significant_plot, warning=FALSE, comments="", message=FALSE}
 
-positive <- function_predictions %>%
+positive_sex <- function_predictions_sex %>%
   filter(mean >0) %>%
   arrange(mean) %>%
   filter(positive_support>=0.9) %>%
   dplyr::select(-negative_support) %>%
-  rename(support=positive_support)
+  rename(support=positive_support)%>%
+  left_join(unique_funct_db,by=join_by(trait==Code_function))
 
-negative <- function_predictions %>%
+negative_sex <- function_predictions_sex %>%
   filter(mean <0) %>%
   arrange(mean) %>%
   filter(negative_support>=0.9) %>%
   dplyr::select(-positive_support) %>%
-  rename(support=negative_support)
+  rename(support=negative_support)%>%
+  left_join(unique_funct_db,by=join_by(trait==Code_function))
 
-bind_rows(positive,negative) %>%
-  left_join(GIFT_db,by=join_by(trait==Code_function)) %>%
-  mutate(trait=factor(trait,levels=c(rev(positive$trait),rev(negative$trait)))) %>%
-  ggplot(aes(x=mean, y=fct_rev(trait), xmin=p1, xmax=p9, color=Function)) +
-      geom_point() +
-      geom_errorbar() +
+unique_funct_db<- GIFT_db[c(3,4,5)] %>% 
+  distinct(Code_function, .keep_all = TRUE)
+#pdf("figures/Functional_trait_sex.pdf",width=9, height=8)
+bind_rows(positive_sex,negative_sex) %>%
+  left_join(unique_funct_db,by=join_by(trait==Code_function)) %>%
+  mutate(Function.x=factor(Function.x,levels=c(rev(positive_sex$Function),rev(negative_sex$Function)))) %>%
+  ggplot(aes(x=mean, y=fct_rev(Function.x), xmin=p1, xmax=p9, color=Function.x)) +
+      geom_point(show.legend = FALSE) +
+      geom_errorbar(show.legend = FALSE) +
 #      xlim(c(-0.02,0.02)) +
       geom_vline(xintercept=0) +
       scale_color_manual(values = c("#debc14","#440526","#dc7c17","#172742","#357379","#6c7e2c","#d8dc69","#774d35","#db717d")) +
       theme_minimal() +
       labs(x="Regression coefficient",y="Functional trait")
+#dev.off()
 ```
 
+
+
 <!--chapter:end:07_hmsc_analysis.Rmd-->
+
+# Cats behaviours
+
+## Samples and behavioural traits
+```{r binary, warning=FALSE, echo=FALSE, comments="", message=FALSE}
+data <- sample_metadata %>%
+  rename(Fear_humans=Acceptance) %>% 
+  rename(Unhealthy=Healthy)%>%
+  mutate(across(.cols = c(Bites, Hisses, Retreats, Vocalization,Sedating,Dry_skin,Stiff,Agile), ~ case_when(. == "NO" ~ "0",
+                                                                              . == "YES" ~ "1",
+                                                                              TRUE ~ NA_character_)))%>%
+  mutate(across(.cols = c(Fear_humans,Unhealthy), ~ case_when(. == "YES" ~ "0",
+                                                              . == "NO" ~ "1",
+                                                              TRUE ~ NA_character_)))
+```
+
+```{r domestic_design, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+design<- data %>% 
+  select(sample, Origin)
+
+table<- data %>% 
+  select(sample, Bites,Hisses,Retreats,Fear_humans)%>% 
+  column_to_rownames(., "sample") %>% 
+  mutate_if(is.character,as.numeric)
+```
+
+```{r domestic_metadata1, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+meta_domestic <- data %>% 
+  filter(Origin=="Tame")
+
+domestic_no <- colSums(meta_domestic ==0, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value=".")%>% 
+  rownames_to_column("behaviour")%>%
+  slice(., (11:20))
+
+domestic_no$Presence <- 'No'
+
+domestic_yes <- colSums(meta_domestic ==1, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value=".")%>% 
+  rownames_to_column("behaviour") %>%
+  slice(., (11:20))
+
+domestic_yes$Presence <- 'Yes'
+
+Table_domestic <- rbind(domestic_no, domestic_yes)
+Table_domestic$Origin <- 'Domestic'
+```
+
+```{r feral_metadata1, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+meta_feral <-data %>% 
+  filter(Origin=="Feral")
+
+Feral_no <- colSums(meta_feral ==0, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value=".")%>% 
+  rownames_to_column("behaviour") %>%
+  slice(., (11:20))
+Feral_no$Presence <- 'No'
+
+Feral_yes <- colSums(meta_feral ==1, na.rm=TRUE) %>% 
+  as.data.frame() %>% 
+  rename(Value=".")%>% 
+  rownames_to_column("behaviour")%>%
+  slice(., (11:20))
+
+Feral_yes$Presence <- 'Yes'
+Table_feral <- rbind(Feral_no, Feral_yes)
+Table_feral$Origin <- 'Feral'
+
+Table_behaviours <- rbind(Table_domestic, Table_feral)
+```
+
+```{r plot_metadata_origin, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+ggplot(Table_behaviours, aes(x=behaviour, y=Value, fill=Presence)) +
+  geom_bar(stat="identity")+
+  facet_grid(.~Origin,  scales="free_x")+
+  scale_fill_manual(values=c("#088CA2","#823838"))+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+    strip.background = element_rect(fill = "white"),
+    strip.text = element_text(size = 14, lineheight = 0.6),
+    strip.placement = "outside",
+    panel.background = element_rect(fill = NA, color = "black",linetype = "solid"),
+    axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
+    axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0))
+    )+
+  labs(x = "Behavioural trait", y = "Number of observation")
+```
+```{r plot_behaviour, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+ggplot(Table_behaviours, aes(x=Origin, y=Value, fill=Presence)) +
+  geom_bar(stat="identity")+
+  facet_wrap( ~ behaviour, strip.position = "top", scales = "free_x", nrow = 1)+
+#  stat_compare_means()+
+  scale_fill_manual(values=c("#088CA2","#823838"))+
+#  facet_grid(.~behaviour,  scales="free_x", strip.position="bottom")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        strip.background = element_rect(fill = "white"),
+        strip.text = element_text(size = 9, lineheight = 0.6,angle = 45),
+        strip.placement = "outside",
+    panel.background = element_rect(fill = NA, color = "black",linetype = "solid"),
+    axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
+    axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)),
+    axis.ticks.x = element_blank(),
+    )+
+  labs(x = "Origin", y = "Number of observation")
+```
+
+
+```{r domestic_metadata_new, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+meta_domestic <- data %>% 
+  filter(Origin=="Tame")
+
+domestic_no <- colSums(meta_domestic ==0, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_no=".")%>% 
+  rownames_to_column("behaviour")%>%
+  slice(., (11:20))
+
+domestic_yes <- colSums(meta_domestic ==1, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_yes=".")%>% 
+  rownames_to_column("behaviour") %>%
+  slice(., (11:20))%>%
+  right_join(domestic_no, by=join_by(behaviour == behaviour))
+domestic_yes$sum <- domestic_yes$Value_yes + domestic_yes$Value_no
+
+domestic_yes <- transform(domestic_yes, Percentage=Value_yes*100/sum)
+domestic_yes$Origin <- 'Tame'
+```
+```{r feral_metadata_new, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+meta_feral <- data %>% 
+  filter(Origin=="Feral")
+
+feral_no <- colSums(meta_feral ==0, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_no=".")%>% 
+  rownames_to_column("behaviour")%>%
+  slice(., (11:20))
+
+feral_yes <- colSums(meta_feral ==1, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_yes=".")%>% 
+  rownames_to_column("behaviour") %>%
+  slice(., (11:20))%>%
+  right_join(feral_no1, by=join_by(behaviour == behaviour))
+feral_yes$sum <- feral_yes$Value_yes + feral_yes1$Value_no
+
+feral_yes <- transform(feral_yes, Percentage=Value_yes*100/sum)
+
+feral_yes$Origin <- 'Feral'
+
+Table_percentages <- rbind(domestic_yes, feral_yes)
+```
+
+```{r plot_metadata, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+ggplot(Table_percentages, aes(x=Origin, y=Percentage, fill=Origin)) +
+  geom_bar(stat="identity")+
+  facet_wrap( ~ behaviour, strip.position = "bottom", scales = "free_x", nrow = 1)+
+#  stat_compare_means()+
+  scale_fill_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          values=c("#6A9AC3","#F3B942"))+
+#  facet_grid(.~behaviour,  scales="free_x", strip.position="bottom")+
+  theme(axis.text.x = element_blank(),
+    strip.background = element_rect(fill = "white"),
+    strip.text = element_text(size = 9, lineheight = 0.6,angle = 45),
+    strip.placement = "outside",
+    panel.background = element_rect(fill = NA, color = "black",linetype = "solid"),
+    axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
+    axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)),
+    axis.ticks.x = element_blank(),
+    )+
+  labs(x = "Behavioural trait", y = "Number of positive observation")
+```
+
+***Bites***
+```{r domestic_metadata_bites, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+meta_domestic <- data %>% 
+  filter(Origin=="Tame")
+
+domestic_no <- colSums(meta_domestic ==0, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_no=".")%>% 
+  rownames_to_column("behaviour")%>%
+  slice(., (11))
+
+domestic_yes <- colSums(meta_domestic ==1, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_yes=".")%>% 
+  rownames_to_column("behaviour") %>%
+  slice(., (11))%>%
+  right_join(domestic_no, by=join_by(behaviour == behaviour))
+
+domestic_yes$Origin <- 'Tame'
+```
+```{r feral_metadata_bites, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+meta_feral <- data %>% 
+  filter(Origin=="Feral")
+
+feral_no <- colSums(meta_feral ==0, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_no=".")%>% 
+  rownames_to_column("behaviour")%>%
+  slice(., (11))
+
+feral_yes <-colSums(meta_feral ==1, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_yes=".")%>% 
+  rownames_to_column("behaviour") %>%
+  slice(., (11)) %>%
+  right_join(feral_no, by=join_by(behaviour == behaviour))
+
+feral_yes$Origin <- 'Feral'
+  
+Table_percentages <- rbind(domestic_yes, feral_yes)%>%
+  select(-behaviour)%>%
+  column_to_rownames(., "Origin")
+  
+chisq.test(Table_percentages)
+```
+
+***Hisses***
+```{r domestic_metadata_hisses, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+domestic_no <- colSums(meta_domestic ==0, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_no=".")%>% 
+  rownames_to_column("behaviour")%>%
+  slice(., (12))
+
+domestic_yes <- colSums(meta_domestic ==1, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_yes=".")%>% 
+  rownames_to_column("behaviour") %>%
+  slice(., (12))%>%
+  right_join(domestic_no, by=join_by(behaviour == behaviour))
+
+domestic_yes$Origin <- 'Tame'
+```
+```{r feral_metadata_hisses, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+feral_no <- colSums(meta_feral ==0, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_no=".")%>% 
+  rownames_to_column("behaviour")%>%
+  slice(., (12))
+
+#Bites
+feral_yes <-colSums(meta_feral ==1, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_yes=".")%>% 
+  rownames_to_column("behaviour") %>%
+  slice(., (12)) %>%
+  right_join(feral_no, by=join_by(behaviour == behaviour))
+
+feral_yes$Origin <- 'Feral'
+  
+Table_percentages <- rbind(domestic_yes, feral_yes)%>%
+  select(-behaviour)%>%
+  column_to_rownames(., "Origin")
+  
+chisq.test(Table_percentages)
+```
+
+***Retreats***
+
+```{r domestic_metadata_Retreats, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+meta_domestic <- data %>% 
+  filter(Origin=="Tame")
+
+domestic_no <- colSums(meta_domestic ==0, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_no=".")%>% 
+  rownames_to_column("behaviour")%>%
+  slice(., (13))
+
+domestic_yes <- colSums(meta_domestic ==1, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_yes=".")%>% 
+  rownames_to_column("behaviour") %>%
+  slice(., (13))%>%
+  right_join(domestic_no, by=join_by(behaviour == behaviour))
+
+domestic_yes$Origin <- 'Tame'
+```
+```{r feral_metadata_Retreats, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+feral_no <- colSums(meta_feral ==0, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_no=".")%>% 
+  rownames_to_column("behaviour")%>%
+  slice(., (13))
+
+#Bites
+feral_yes <-colSums(meta_feral ==1, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_yes=".")%>% 
+  rownames_to_column("behaviour") %>%
+  slice(., (13)) %>%
+  right_join(feral_no, by=join_by(behaviour == behaviour))
+
+feral_yes$Origin <- 'Feral'
+  
+Table_percentages <- rbind(domestic_yes, feral_yes)%>%
+  select(-behaviour)%>%
+  column_to_rownames(., "Origin")
+  
+chisq.test(Table_percentages)
+```
+
+***Vocalization***
+
+```{r domestic_metadata_Vocalization, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+domestic_no <- colSums(meta_domestic ==0, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_no=".")%>% 
+  rownames_to_column("behaviour")%>%
+  slice(., (14))
+
+domestic_yes <- colSums(meta_domestic ==1, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_yes=".")%>% 
+  rownames_to_column("behaviour") %>%
+  slice(., (14))%>%
+  right_join(domestic_no, by=join_by(behaviour == behaviour))
+
+domestic_yes$Origin <- 'Tame'
+```
+```{r feral_metadata_Vocalization, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+meta_feral <- data %>% 
+  filter(Origin=="Feral")
+
+feral_no <- colSums(meta_feral ==0, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_no=".")%>% 
+  rownames_to_column("behaviour")%>%
+  slice(., (14))
+
+feral_yes <-colSums(meta_feral ==1, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_yes=".")%>% 
+  rownames_to_column("behaviour") %>%
+  slice(., (14)) %>%
+  right_join(feral_no, by=join_by(behaviour == behaviour))
+
+feral_yes$Origin <- 'Feral'
+  
+Table_percentages <- rbind(domestic_yes, feral_yes)%>%
+  select(-behaviour)%>%
+  column_to_rownames(., "Origin")
+  
+chisq.test(Table_percentages)
+```
+
+***Acceptance***
+
+```{r domestic_metadata_Acceptance, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+domestic_no <- colSums(meta_domestic ==0, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_no=".")%>% 
+  rownames_to_column("behaviour")%>%
+  slice(., (15))
+
+domestic_yes <- colSums(meta_domestic ==1, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_yes=".")%>% 
+  rownames_to_column("behaviour") %>%
+  slice(., (15))%>%
+  right_join(domestic_no, by=join_by(behaviour == behaviour))
+
+domestic_yes$Origin <- 'Tame'
+```
+```{r feral_metadata_Acceptance, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+meta_feral <- data %>% 
+  filter(Origin=="Feral")
+
+feral_no <- colSums(meta_feral ==0, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_no=".")%>% 
+  rownames_to_column("behaviour")%>%
+  slice(., (15))
+
+feral_yes <-colSums(meta_feral ==1, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_yes=".")%>% 
+  rownames_to_column("behaviour") %>%
+  slice(., (15)) %>%
+  right_join(feral_no, by=join_by(behaviour == behaviour))
+
+feral_yes$Origin <- 'Feral'
+  
+Table_percentages <- rbind(domestic_yes, feral_yes)%>%
+  select(-behaviour)%>%
+  column_to_rownames(., "Origin")
+  
+chisq.test(Table_percentages)
+```
+
+***Sedating***
+
+```{r domestic_metadata_Sedating, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+domestic_no <- colSums(meta_domestic ==0, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_no=".")%>% 
+  rownames_to_column("behaviour")%>%
+  slice(., (16))
+
+domestic_yes <- colSums(meta_domestic ==1, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_yes=".")%>% 
+  rownames_to_column("behaviour") %>%
+  slice(., (16))%>%
+  right_join(domestic_no, by=join_by(behaviour == behaviour))
+
+domestic_yes$Origin <- 'Tame'
+```
+```{r feral_metadata_Sedating, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+meta_feral <- data %>% 
+  filter(Origin=="Feral")
+
+feral_no <- colSums(meta_feral ==0, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_no=".")%>% 
+  rownames_to_column("behaviour")%>%
+  slice(., (16))
+
+feral_yes <-colSums(meta_feral ==1, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_yes=".")%>% 
+  rownames_to_column("behaviour") %>%
+  slice(., (16)) %>%
+  right_join(feral_no, by=join_by(behaviour == behaviour))
+
+feral_yes$Origin <- 'Feral'
+  
+Table_percentages <- rbind(domestic_yes, feral_yes)%>%
+  select(-behaviour)%>%
+  column_to_rownames(., "Origin")
+  
+chisq.test(Table_percentages)
+```
+
+***Healthy***
+
+```{r domestic_metadata_Healthy, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+domestic_no <- colSums(meta_domestic ==0, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_no=".")%>% 
+  rownames_to_column("behaviour")%>%
+  slice(., (17))
+
+domestic_yes <- colSums(meta_domestic ==1, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_yes=".")%>% 
+  rownames_to_column("behaviour") %>%
+  slice(., (17))%>%
+  right_join(domestic_no, by=join_by(behaviour == behaviour))
+
+domestic_yes$Origin <- 'Tame'
+```
+```{r feral_metadata_Healthy, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+feral_no <- colSums(meta_feral ==0, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_no=".")%>% 
+  rownames_to_column("behaviour")%>%
+  slice(., (17))
+
+feral_yes <-colSums(meta_feral ==1, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_yes=".")%>% 
+  rownames_to_column("behaviour") %>%
+  slice(., (17)) %>%
+  right_join(feral_no, by=join_by(behaviour == behaviour))
+
+feral_yes$Origin <- 'Feral'
+  
+Table_percentages <- rbind(domestic_yes, feral_yes)%>%
+  select(-behaviour)%>%
+  column_to_rownames(., "Origin")
+  
+chisq.test(Table_percentages)
+```
+
+***Stiff***
+
+```{r domestic_metadata_Stiff, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+domestic_no <- colSums(meta_domestic ==0, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_no=".")%>% 
+  rownames_to_column("behaviour")%>%
+  slice(., (19))
+
+domestic_yes <- colSums(meta_domestic ==1, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_yes=".")%>% 
+  rownames_to_column("behaviour") %>%
+  slice(., (19))%>%
+  right_join(domestic_no, by=join_by(behaviour == behaviour))
+
+domestic_yes$Origin <- 'Tame'
+```
+```{r feral_metadata_Stiff, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+feral_no <- colSums(meta_feral ==0, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_no=".")%>% 
+  rownames_to_column("behaviour")%>%
+  slice(., (19))
+
+feral_yes <-colSums(meta_feral ==1, na.rm=TRUE)%>% 
+  as.data.frame() %>% 
+  rename(Value_yes=".")%>% 
+  rownames_to_column("behaviour") %>%
+  slice(., (19)) %>%
+  right_join(feral_no, by=join_by(behaviour == behaviour))
+
+feral_yes$Origin <- 'Feral'
+  
+Table_percentages <- rbind(domestic_yes, feral_yes)%>%
+  select(-behaviour)%>%
+  column_to_rownames(., "Origin")
+  
+chisq.test(Table_percentages)
+```
+
+
+```{r beha_new, comment="", message=FALSE, warning=FALSE, echo= FALSE,eval=FALSE}
+## Selecting social and non-social to humans cats
+
+### 1) Selecting only samples that match the origin and behaviour
+sample_tame_behaviour <- rowSums(table, na.rm = TRUE)%>%
+  as.data.frame() %>% 
+  rename(frequency=".")%>% 
+  rownames_to_column("sample") %>% 
+  right_join(design, by=join_by(sample == sample)) %>%
+  filter(Origin=="Tame")%>% #51tik 10
+  filter(frequency==0)%>%
+  select(sample)
+
+sample_feral_behaviour <- rowSums(table, na.rm = TRUE)%>%
+  as.data.frame() %>% 
+  rename(frequency=".")%>% 
+  rownames_to_column("sample") %>% 
+  right_join(design, by=join_by(sample == sample)) %>%
+  filter(Origin=="Feral")%>% #41tik 6
+  filter(frequency>0)%>%
+  select(sample)
+
+all_samples_behaviour <- rbind(sample_tame_behaviour,sample_feral_behaviour)
+
+sample_metadata_behaviour <- sample_metadata[sample_metadata$sample %in% all_samples_behaviour$sample,]
+
+genome_counts_behaviour <- genome_counts_filt %>%
+    dplyr::select(c("genome",sample_metadata_behaviour$sample)) %>%
+  filter(rowSums(across(where(is.numeric)))!=0)
+
+genomes <- genome_counts_behaviour$genome 
+
+genome_metadata_behaviour <- genome_metadata %>%
+   filter(genome %in% genomes)
+
+genome_tree_behaviour <- keep.tip(genome_tree, tip=genome_metadata_behaviour$genome)
+genome_gifts_behaviour <- genome_gifts %>%
+  as.data.frame() %>% 
+  rownames_to_column(., "genome") %>%
+  filter(genome %in% genomes)%>% 
+  column_to_rownames(., "genome")
+```
+
+```{r beha_group, comment="", message=FALSE, warning=FALSE, echo= FALSE,eval=FALSE}
+### 2) Grouping according to the behaviour
+
+sample_metadata_behaviour <- rowSums(table, na.rm = TRUE)%>%
+  as.data.frame() %>% 
+  rename(frequency=".")%>% 
+  rownames_to_column("sample") %>% 
+  right_join(design, by=join_by(sample == sample)) %>%
+ # filter(Origin=="Tame")%>% #51tik 10
+      mutate(behaviour = case_when(frequency==0~"social",
+                                     frequency>0~"antisocial"
+                                     )) %>% 
+  select(sample, behaviour) %>% 
+  right_join(sample_metadata, by=join_by(sample == sample))%>%
+    mutate(across(.cols = c(Origin), ~ case_when(. == "Tame" ~ "domestic",
+                                                              . == "Feral" ~ "feral",
+                                                              TRUE ~ NA_character_))) %>%
+  rename(Sex=F.M)%>%
+  rename(Behaviour=behaviour)
+
+write_tsv(sample_metadata_behaviour, "data/sample_metadata_behaviour.tsv")
+
+new_behaviours <- rowSums(table, na.rm = TRUE)%>%
+  as.data.frame() %>% 
+  rename(frequency=".")%>% 
+  rownames_to_column("sample") %>% 
+  right_join(design, by=join_by(sample == sample)) %>%
+ # filter(Origin=="Tame")%>% #51tik 10
+      mutate(behaviour = case_when(frequency==0~"Tame",
+                                     frequency>0~"Feral"
+                                     )) %>% 
+  select(sample, behaviour) %>% 
+  right_join(sample_metadata, by=join_by(sample == sample))%>%
+    group_by(behaviour) %>%
+    summarise(count=n())
+
+# Only those that match origin with behaviour
+sample_metadata_behaviour%>%
+    group_by(Location, Origin) %>%
+    summarise(count=n())
+# New behavioural classification
+new_behaviours%>%
+    group_by(behaviour) %>%
+    summarise(count=n())
+
+# Original behavioural classification
+sample_metadata%>%
+    group_by(Location, Origin) %>%
+    summarise(count=n())
+
+new_behaviours$similarity <- new_behaviours$behaviour == new_behaviours$Origin
+new_behaviours%>%
+    group_by(Location, similarity) %>%
+    summarise(count=n())
+new_behaviours%>%
+    group_by(similarity, Origin) %>%
+    summarise(count=n())
+```
+
+
+
+
+```{r beta_div_beha, comment="", message=FALSE, warning=FALSE, echo= FALSE,eval=FALSE}
+beta_q0n_behaviour <- genome_counts_behaviour %>%
+  column_to_rownames(., "genome") %>%
+  filter(rowSums(. != 0, na.rm = TRUE) > 0) %>%
+  dplyr::select_if(~!all(. == 0)) %>%
+  hillpair(., q = 0)
+
+beta_q1n_behaviour <- genome_counts_behaviour %>%
+  column_to_rownames(., "genome") %>%
+  filter(rowSums(. != 0, na.rm = TRUE) > 0) %>%
+  dplyr::select_if(~!all(. == 0)) %>%
+  hillpair(., q = 1)
+
+beta_q1p_behaviour <- genome_counts_behaviour %>%
+  column_to_rownames(., "genome") %>%
+  filter(rowSums(. != 0, na.rm = TRUE) > 0) %>%
+  dplyr::select_if(~!all(. == 0)) %>%
+  hillpair(., q = 1, tree = genome_tree)
+
+beta_q1f_behaviour <- genome_counts_behaviour %>%
+  column_to_rownames(., "genome") %>%
+  filter(rowSums(. != 0, na.rm = TRUE) > 0) %>%
+  dplyr::select_if(~!all(. == 0)) %>%
+  hillpair(., q = 1, dist = dist)
+```
+
+```{r behapermanova, comment="", message=FALSE, warning=FALSE, echo= FALSE,eval=FALSE}
+save(beta_q0n_behaviour, 
+     beta_q1n_behaviour, 
+     beta_q1p_behaviour, 
+     beta_q1f_behaviour, 
+     file = "data/beta_behaviour.Rdata")
+```
+
+
+
+```{r permanova, comment="", message=FALSE, warning=FALSE, echo= FALSE,eval=FALSE}
+## Permanova
+#Richness
+betadisper(beta_q0n_behaviour$C, sample_metadata_behaviour$Origin) %>% permutest(., pairwise = TRUE) 
+adonis2(beta_q0n_behaviour$C ~ Origin, 
+        data = sample_metadata_behaviour %>% arrange(match(sample,labels(beta_q0n_behaviour$C))), 
+        permutations = 999, 
+        strata = sample_metadata_behaviour %>% arrange(match(sample,labels(beta_q0n_behaviour$C))) %>% pull(Location)) %>%
+        broom::tidy() %>%
+        tt()
+
+#Neutral diversity
+betadisper(beta_q1n$C, sample_metadata_behaviour$Origin) %>% permutest(., pairwise = TRUE) 
+adonis2(beta_q1n$C ~ Origin, 
+        data = sample_metadata_behaviour %>% arrange(match(sample,labels(beta_q1n$C))), 
+        permutations = 999, 
+        strata = sample_metadata_behaviour %>% arrange(match(sample,labels(beta_q1n$C))) %>% pull(Location)) %>%
+        broom::tidy() %>%
+        tt()
+
+#Phylogenetic diversity
+betadisper(beta_q1p$C, sample_metadata_behaviour$Origin) %>% permutest(., pairwise = TRUE) 
+adonis2(beta_q1p$C ~ Origin, 
+        data = sample_metadata_behaviour %>% arrange(match(sample,labels(beta_q1p$C))), 
+        permutations = 999, 
+        strata = sample_metadata_behaviour %>% arrange(match(sample,labels(beta_q1p$C))) %>% pull(Location)) %>%
+        broom::tidy() %>%
+        tt()
+
+#Functional diversity
+betadisper(beta_q1f$C, sample_metadata_behaviour$Origin) %>% permutest(., pairwise = TRUE) 
+adonis2(beta_q1f$C ~ Origin, 
+        data = sample_metadata_behaviour %>% arrange(match(sample,labels(beta_q1f$C))), 
+        permutations = 999, 
+        strata = sample_metadata_behaviour %>% arrange(match(sample,labels(beta_q1f$C))) %>% pull(Location)) %>%
+        broom::tidy() %>%
+        tt()
+```
+
+
+
+<!--chapter:end:08_behaviours.Rmd-->
 

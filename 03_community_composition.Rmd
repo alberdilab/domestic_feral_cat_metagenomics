@@ -1,7 +1,7 @@
 # Community composition
 
 ```{r load_data_community}
-load("data/data1.Rdata")
+load("data/data_arrange.Rdata")
 ```
 
 ## Taxonomy overview 
@@ -56,6 +56,32 @@ genome_counts_filt %>%
           strip.text = element_text(size = 12, lineheight = 0.6)) +
    labs(fill="Phylum",y = "Relative abundance",x="Samples")
 ```
+
+```{r taxonomy_barplot_behaviour_location, fig.height=6, fig.width=10, fig.fullwidth=TRUE}
+genome_counts_filt %>%
+  mutate_at(vars(-genome),~./sum(.)) %>% #apply TSS nornalisation
+  pivot_longer(-genome, names_to = "sample", values_to = "count") %>% #reduce to minimum number of columns
+  left_join(., genome_metadata, by = join_by(genome == genome)) %>% #append genome metadata
+  left_join(., sample_metadata, by = join_by(sample == sample)) %>% #append sample metadata
+  filter(count > 0) %>% #filter 0 counts
+  ggplot(., aes(x=sample,y=count, fill=phylum, group=phylum)) + #grouping enables keeping the same sorting of taxonomic units
+    geom_bar(stat="identity", colour="white", linewidth=0.1) + #plot stacked bars with white borders
+    scale_fill_manual(values=phylum_colors) +
+    facet_nested(.~Origin+Location,  scales="free_x") + #facet per day and treatment
+    guides(fill = guide_legend(ncol = 1)) +
+    theme(axis.text.x = element_blank(),
+          axis.ticks.x =element_blank(),
+          axis.title.x = element_blank(),
+          axis.text.y = element_text(size=8),
+          axis.title.y = element_text(size=12),
+          panel.background = element_blank(),
+          axis.line = element_line(linewidth = 0.5, linetype = "solid", colour = "black"),
+          panel.border = element_rect(colour = "black", fill = NA),
+          strip.background = element_rect(fill = "white", color = "black"),
+          strip.text = element_text(size = 10, lineheight = 0.6)) +
+   labs(fill="Phylum",y = "Relative abundance",x="Samples")
+```
+
 ### Phylum relative abundances
 
 ```{r taxonomy_phylum_summary, warning=FALSE, comments="", message=FALSE}

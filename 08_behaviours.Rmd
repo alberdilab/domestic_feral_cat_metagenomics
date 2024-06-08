@@ -23,7 +23,7 @@ table<- data %>%
   mutate_if(is.character,as.numeric)
 ```
 
-```{r domestic_metadata, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+```{r domestic_metadata1, warning=FALSE, echo=FALSE,comments="", message=FALSE}
 meta_domestic <- data %>% 
   filter(Origin=="Tame")
 
@@ -47,7 +47,7 @@ Table_domestic <- rbind(domestic_no, domestic_yes)
 Table_domestic$Origin <- 'Domestic'
 ```
 
-```{r feral_metadata, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+```{r feral_metadata1, warning=FALSE, echo=FALSE,comments="", message=FALSE}
 meta_feral <-data %>% 
   filter(Origin=="Feral")
 
@@ -106,7 +106,7 @@ ggplot(Table_behaviours, aes(x=Origin, y=Value, fill=Presence)) +
 ```
 
 
-```{r domestic_metadata, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+```{r domestic_metadata_new, warning=FALSE, echo=FALSE,comments="", message=FALSE}
 meta_domestic <- data %>% 
   filter(Origin=="Tame")
 
@@ -127,7 +127,7 @@ domestic_yes$sum <- domestic_yes$Value_yes + domestic_yes$Value_no
 domestic_yes <- transform(domestic_yes, Percentage=Value_yes*100/sum)
 domestic_yes$Origin <- 'Tame'
 ```
-```{r feral_metadata, warning=FALSE, echo=FALSE,comments="", message=FALSE}
+```{r feral_metadata_new, warning=FALSE, echo=FALSE,comments="", message=FALSE}
 meta_feral <- data %>% 
   filter(Origin=="Feral")
 

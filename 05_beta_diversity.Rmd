@@ -1,7 +1,7 @@
 # Beta diversity
 
 ```{r load_data_beta}
-load("data/data1.Rdata")
+load("data/data_arrange.Rdata")
 ```
 
 ```{r beta_div, comment="", message=FALSE, warning=FALSE}
@@ -30,7 +30,7 @@ beta_q1f <- genome_counts_filt %>%
   hillpair(., q = 1, dist = dist)
 ```
 
-```{r}
+```{r save_beta, comment="", echo= FALSE, message=FALSE, warning=FALSE}
 save(beta_q0n, 
      beta_q1n, 
      beta_q1p, 
@@ -38,10 +38,13 @@ save(beta_q0n,
      file = "data/beta.Rdata")
 ```
 
+```{r load_beta, comment="", echo= FALSE, message=FALSE, warning=FALSE}
+load("data/beta.Rdata")
+```
 ## Location
 ### Richness diversity
 
-```{r}
+```{r permanova_color, comment="", message=FALSE, warning=FALSE}
 set.seed(0606)
 locationcolors=c('#c4d7d1','#408892','#2d3749','#c04062','#6b3a59','#e08683')
 ```
@@ -55,7 +58,7 @@ adonis2(beta_q0n$S ~ Location,
         tt()
 pairwise.adonis(beta_q0n$S, sample_metadata$Location, perm = 999)
 ```
-```{r beta_div_nmds_neutral_plot, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
+```{r beta_div_nmds_rich_plot, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
 #pdf("figures/beta_q0_loca.pdf",width=9, height=5)
 beta_q0n$S %>%
   vegan::metaMDS(., trymax = 500, k = 2, trace=0) %>%
@@ -180,7 +183,7 @@ pairwise.adonis(beta_q1f$S, sample_metadata$Location, perm = 999)
 
 ```
 
-```{r beta_div_nmds_phylo_plot, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
+```{r beta_div_nmds_funct_plot, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
 #pdf("figures/beta_q1f_loca.pdf",width=9, height=5)
 beta_q1f$S %>%
   vegan::metaMDS(., trymax = 500, k = 2, trace=0) %>%

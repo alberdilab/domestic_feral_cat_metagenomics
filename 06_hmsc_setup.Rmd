@@ -3,7 +3,7 @@
 ## Setup
 
 ```{r load_data_hmsc_setup}
-load("data/data1.Rdata")
+load("data/data_arrange.Rdata")
 ```
 
 ```{r hmsc_input, warning=FALSE, comments="", message=FALSE}

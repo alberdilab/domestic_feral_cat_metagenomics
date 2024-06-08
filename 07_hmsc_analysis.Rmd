@@ -3,7 +3,7 @@
 ## Load data
 
 ```{r load_data_hmsc_analysis}
-load("data/data1.Rdata")
+load("data/data_arrange.Rdata")
 load("hmsc/fit_model1_250_10.Rdata")
 ```
 
@@ -223,6 +223,7 @@ phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI
   dplyr::select(colors) %>%
   pull()
 
+#pdf("figures/sig_Mags_violin.pdf",width=10, height=8)
 inner_join(estimate,support,by=join_by(genome==genome)) %>%
     mutate(significance=ifelse(support >= 0.9 | support <= 0.1,1,0)) %>%
     mutate(support=ifelse(mean<0,1-support,support)) %>%
@@ -236,6 +237,7 @@ inner_join(estimate,support,by=join_by(genome==genome)) %>%
       labs(x = "Beta regression coefficient", y = "Posterior probability") +
       theme_minimal()+
        theme(legend.position = "none")
+#dev.off()
 ```
 
 
@@ -293,20 +295,33 @@ grid.arrange(grobs = list(matrix,vtree),
 
 
 
-```{r}
+```{r sig_mag_Table, warning=FALSE, echo=FALSE, comments="", message=FALSE}
 # Overall species prediction
+
+Test <- getPostEstimate(hM=m, parName="Beta")$support %>%
+    as.data.frame() %>%
+    mutate(variable=m$covNames) %>%
+    pivot_longer(!variable, names_to = "genome", values_to = "value") %>%
+    mutate(trend = case_when(
+          value >= support ~ "Positive",
+          value <= negsupport ~ "Negative",
+          TRUE ~ "Neutral")) %>%
+    filter(variable=="originTame")
+
 pred_species <- constructGradient(m, 
                       focalVariable = "origin", 
                       non.focalVariables = 1, 
                       ngrid=gradientlength) %>%
              predict(m, Gradient = ., expected = TRUE) %>%
              as.data.frame() %>%
-             mutate(origin=c("domestic","feral")) %>%
+             mutate(origin=c("Tame","Feral")) %>%
              pivot_longer(!origin, names_to = "genome", values_to = "value") %>%
              mutate(genome = sub("(.*\\..*\\.)[^.]+.*", "\\1", genome)) %>% #remove iteration suffix
-             mutate(genome =  sub("\\.$", "", genome))
+             mutate(genome =  sub("\\.$", "", genome)) %>% 
+   left_join(Test, by=join_by(genome==genome))%>%
+  filter(trend != "Neutral")
 ```
-```{r}
+```{r sig_mag_plot, comment="", echo=FALSE, message=FALSE, warning=FALSE, fig.height=8, fig.width=10, fig.fullwidth=TRUE}
 phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
     mutate(phylum=str_remove_all(phylum, "p__")) %>%
     right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
@@ -326,48 +341,38 @@ colors_alphabetic <- read_tsv("https://raw.githubusercontent.com/earthhologenome
     arrange(phylum) %>%
     dplyr::select(colors) %>%
     pull()
+
+
+genome_metadata1<- genome_metadata
+genome_metadata1 <- genome_metadata1 %>%  
+    mutate(family = coalesce(family, paste('Unclassified', order)),
+           genus = coalesce(genus, 
+                              if_else(grepl('^Unclassified', family),
+                                      family, paste('Unclassified', family))))
+
+
+
+
+#pdf("figures/sig_Mags.pdf",width=9, height=10)
 pred_species %>%
-      pivot_wider(names_from = origin, values_from = value) %>%
-      unnest(c(`domestic`, `feral`)) %>%
-      mutate(diff_grey.red = `domestic` - `feral`) %>%
-      select(genome, diff_grey.red) %>%
-      left_join(genome_metadata, by=join_by(genome==genome)) %>%
+      pivot_wider(names_from = origin, values_from = value.x) %>%
+      unnest(c(`Tame`, `Feral`)) %>%
+      mutate(diff_dom.feral = `Tame` - `Feral`) %>%
+      select(genome, diff_dom.feral) %>%
+      left_join(genome_metadata1, by=join_by(genome==genome)) %>%
       mutate(genome= factor(genome, levels=genome_tree$tip.label)) %>%
-      ggplot(., aes(y=genome, x=diff_grey.red, fill=phylum, color=phylum)) +
+      ggplot(., aes(y=forcats::fct_reorder(genus,diff_dom.feral), x=diff_dom.feral, fill=phylum, color=phylum)) +
             geom_boxplot(outlier.shape = NA) +
           scale_color_manual(values=colors_alphabetic)+
             scale_fill_manual(values=colors_alphabetic)+
           geom_vline(xintercept = 0)+
-          theme_classic() +
-          theme(axis.text.y = element_blank())
+          theme_classic()+
+  labs(x = "Log-abundance difference", y = "Genera")
+#dev.off()
 
 
 ```
-```{r ancombc_rand_plot, comment="", echo=FALSE, message=FALSE, warning=FALSE, fig.height=8, fig.width=10, fig.fullwidth=TRUE}
 
-pred_species %>%
-      pivot_wider(names_from = origin, values_from = value) %>%
-      unnest(c(`domestic`, `feral`)) %>%
-      mutate(diff_grey.red = `domestic` - `feral`) %>%
-      select(genome, diff_grey.red) %>%
-      left_join(genome_metadata, by=join_by(genome==genome)) %>%
-      mutate(genome= factor(genome, levels=genome_tree$tip.label)) %>% 
-ggplot(aes(x=forcats::fct_rev(genome), y=diff_grey.red, color=phylum)) + 
-  geom_point(size=4) + 
-#  scale_color_manual(values=tax_color) + 
-  geom_hline(yintercept=0) + 
-  coord_flip()+
-  theme(axis.text = element_text(size = 10, face="bold.italic"),
-        axis.title = element_text(size = 12),
-        legend.position = "right", 
-        legend.title = element_blank(),
-        panel.background = element_blank(),
-          panel.grid.major = element_line(size = 0.15, linetype = 'solid',
-                                colour = "grey"))+
-  xlab("Genus") + 
-  ylab("log2FoldChange")+
-  guides(col=guide_legend("Phylum"))
-```
 #### Predict responses (origin)
 
 ```{r hmsc_predictions, warning=FALSE, comments="", message=FALSE}
@@ -771,7 +776,7 @@ bind_rows(positive,negative) %>%
 ### Sex
 #### Positively associated genomes male cats
 
-```{r hmsc_negative_origin, warning=FALSE, comments="", message=FALSE}
+```{r hmsc_negative_sex, warning=FALSE, comments="", message=FALSE}
 # Select modelchain of interest
 load("hmsc/fit_model1_250_10.Rdata")
 # Compute variance partitioning
@@ -845,7 +850,7 @@ getPostEstimate(hM=m, parName="Beta")$support %>%
 ```
 
 #### Estimate - support plot
-```{r hmsc_negative_sex, warning=FALSE, comments="", message=FALSE}
+```{r hmsc_supo_sex, warning=FALSE, comments="", message=FALSE}
 estimate <- getPostEstimate(hM=m, parName="Beta")$mean %>%
     as.data.frame() %>%
     mutate(variable=m$covNames) %>%
@@ -900,9 +905,6 @@ inner_join(estimate,support,by=join_by(genome==genome)) %>%
 #### Predict responses
 
 ```{r hmsc_predictions_sex, warning=FALSE, comments="", message=FALSE}
-
-
-
 gradient = c("Male","Female","Unknown")
 gradientlength = length(gradient)
 
@@ -1028,8 +1030,8 @@ bind_rows(positive_sex,negative_sex) %>%
       labs(x="Regression coefficient",y="Functional trait")
 ```
 
-```{r hmsc_origin_significant_plot1, warning=FALSE, comments="", message=FALSE, fig.height=10, fig.width=8, fig.fullwidth=TRUE}
-pdf("figures/Functional_sex.pdf",width=9, height=10)
+```{r hmsc_origin_ele_significant_plot1, warning=FALSE, comments="", message=FALSE, fig.height=10, fig.width=8, fig.fullwidth=TRUE}
+#pdf("figures/Functional_sex.pdf",width=9, height=10)
 table <- bind_rows(positive_sex,negative_sex) %>%
   left_join(unique_funct_db,by=join_by(trait==Code_element)) #%>%
 #  mutate(trait=factor(trait,levels=c(rev(positive_sex$trait),rev(negative_sex$trait)))) 
@@ -1045,7 +1047,7 @@ table %>%
 #      scale_color_manual(values = c("#debc14","#440526","#dc7c17","#172742","#debc14","#440526","#dc7c17","#172742","#357379","#6c7e2c","#d8dc69","#774d35","#db717d")) +
       theme_minimal() +
       labs(x="Regression coefficient",y="Functional trait")
-dev.off()
+#dev.off()
 ```
 
 #### Function level
@@ -1137,7 +1139,7 @@ negative_sex <- function_predictions_sex %>%
 
 unique_funct_db<- GIFT_db[c(3,4,5)] %>% 
   distinct(Code_function, .keep_all = TRUE)
-pdf("figures/Functional_trait_sex.pdf",width=9, height=8)
+#pdf("figures/Functional_trait_sex.pdf",width=9, height=8)
 bind_rows(positive_sex,negative_sex) %>%
   left_join(unique_funct_db,by=join_by(trait==Code_function)) %>%
   mutate(Function.x=factor(Function.x,levels=c(rev(positive_sex$Function),rev(negative_sex$Function)))) %>%
@@ -1149,7 +1151,7 @@ bind_rows(positive_sex,negative_sex) %>%
       scale_color_manual(values = c("#debc14","#440526","#dc7c17","#172742","#357379","#6c7e2c","#d8dc69","#774d35","#db717d")) +
       theme_minimal() +
       labs(x="Regression coefficient",y="Functional trait")
-dev.off()
+#dev.off()
 ```
 
 
