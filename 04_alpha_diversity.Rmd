@@ -166,14 +166,16 @@ alpha_div %>%
   left_join(., sample_metadata, by = join_by(sample == sample)) %>%
   filter(!is.na(Location)) %>%
   filter(metric=="richness") %>%
-      ggplot(aes(y = value, x = Condition, group=Condition, color=Condition, fill=Condition)) +
+      ggplot(aes(y = value, x = Origin, group=Origin, color=Origin, fill=Origin)) +
       geom_boxplot(outlier.shape = NA) +
-      geom_jitter(alpha=0.5) +
-      scale_color_manual(name="Condition",
-          breaks=c("Domestic","Feral"),
+      geom_jitter(width = 0.1, alpha=0.5) +
+      scale_color_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          labels=c("Domestic","Feral"),
           values=c("#6A9AC3","#F3B942")) +
-      scale_fill_manual(name="Condition",
-          breaks=c("Domestic","Feral"),
+      scale_fill_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          labels=c("Domestic","Feral"),
           values=c("#6A9AC350","#F3B94250")) +
       facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
       coord_cartesian(xlim = c(1, NA)) +
@@ -195,14 +197,16 @@ alpha_div %>%
   left_join(., sample_metadata, by = join_by(sample == sample)) %>%
   filter(!is.na(Location)) %>%
   filter(metric=="neutral") %>%
-      ggplot(aes(y = value, x = Condition, group=Condition, color=Condition, fill=Condition)) +
-      geom_boxplot(outlier.shape = NA, show.legend = FALSE) +
-      geom_jitter(alpha=0.5, show.legend = FALSE) +
-      scale_color_manual(name="Condition",
-          breaks=c("Domestic","Feral"),
+      ggplot(aes(y = value, x = Origin, group=Origin, color=Origin, fill=Origin)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(width = 0.1, alpha=0.5) +
+      scale_color_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          labels=c("Domestic","Feral"),
           values=c("#6A9AC3","#F3B942")) +
-      scale_fill_manual(name="Condition",
-          breaks=c("Domestic","Feral"),
+      scale_fill_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          labels=c("Domestic","Feral"),
           values=c("#6A9AC350","#F3B94250")) +
       facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
       coord_cartesian(xlim = c(1, NA)) +
@@ -227,14 +231,16 @@ alpha_div %>%
   left_join(., sample_metadata, by = join_by(sample == sample)) %>%
   filter(!is.na(Location)) %>%
   filter(metric=="phylogenetic") %>%
-      ggplot(aes(y = value, x = Condition, group=Condition, color=Condition, fill=Condition)) +
+      ggplot(aes(y = value, x = Origin, group=Origin, color=Origin, fill=Origin)) +
       geom_boxplot(outlier.shape = NA) +
-      geom_jitter(alpha=0.5, show.legend = FALSE) +
-      scale_color_manual(name="Condition",
-          breaks=c("Domestic","Feral"),
+      geom_jitter(width = 0.1, alpha=0.5) +
+      scale_color_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          labels=c("Domestic","Feral"),
           values=c("#6A9AC3","#F3B942")) +
-      scale_fill_manual(name="Condition",
-          breaks=c("Domestic","Feral"),
+      scale_fill_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          labels=c("Domestic","Feral"),
           values=c("#6A9AC350","#F3B94250")) +
       facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
       coord_cartesian(xlim = c(1, NA)) +
@@ -258,14 +264,16 @@ alpha_div %>%
   left_join(., sample_metadata, by = join_by(sample == sample)) %>%
   filter(!is.na(Location)) %>%
   filter(metric=="functional") %>%
-      ggplot(aes(y = value, x = Condition, group=Condition, color=Condition, fill=Condition)) +
+      ggplot(aes(y = value, x = Origin, group=Origin, color=Origin, fill=Origin)) +
       geom_boxplot(outlier.shape = NA) +
-      geom_jitter(alpha=0.5) +
-      scale_color_manual(name="Condition",
-          breaks=c("Domestic","Feral"),
+      geom_jitter(width = 0.1, alpha=0.5) +
+      scale_color_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          labels=c("Domestic","Feral"),
           values=c("#6A9AC3","#F3B942")) +
-      scale_fill_manual(name="Condition",
-          breaks=c("Domestic","Feral"),
+      scale_fill_manual(name="Origin",
+          breaks=c("Tame","Feral"),
+          labels=c("Domestic","Feral"),
           values=c("#6A9AC350","#F3B94250")) +
       facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
       coord_cartesian(xlim = c(1, NA)) +

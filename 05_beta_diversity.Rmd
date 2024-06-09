@@ -41,6 +41,7 @@ save(beta_q0n,
 ```{r load_beta, comment="", echo= FALSE, message=FALSE, warning=FALSE}
 load("data/beta.Rdata")
 ```
+
 ## Location
 ### Richness diversity
 
@@ -268,6 +269,7 @@ adonis2(beta_q1n$S ~ Origin,
 pairwise.adonis(beta_q1n$S, sample_metadata$Origin, perm = 999)
 ```
 ```{r beta_div_nmds_neutral_plot_behaviour, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
+pdf("figures/beta_q1n_behaviour.pdf",width=9, height=5)
 beta_q1n$S %>%
   vegan::metaMDS(., trymax = 500, k = 2, trace=0) %>%
   vegan::scores() %>%
@@ -280,25 +282,27 @@ beta_q1n$S %>%
   ggplot(aes(x = NMDS1, y = NMDS2, color = Origin, fill = Origin)) +
       scale_color_manual(name="Origin",
           breaks=c("Tame","Feral"),
+          labels=c("Domestic","Feral"),
           values=c("#6A9AC3","#F3B942")) +
       scale_fill_manual(name="Origin",
           breaks=c("Tame","Feral"),
+          labels=c("Domestic","Feral"),
           values=c("#6A9AC350","#F3B94250")) +
-    geom_point(size = 4) +
+    geom_point(size = 2) +
     #   stat_ellipse(aes(color = beta_q1n_nmds$Groups))+
-    geom_segment(aes(x = x_cen, y = y_cen, xend = NMDS1, yend = NMDS2), alpha = 0.9, show.legend = FALSE) +
+    geom_segment(aes(x = x_cen, y = y_cen, xend = NMDS1, yend = NMDS2), alpha = 0.5, show.legend = FALSE) +
     theme_classic() +
     theme(
-      axis.text.x = element_text(size = 12),
-      axis.text.y = element_text(size = 12),
-      axis.title = element_text(size = 20, face = "bold"),
-      axis.text = element_text(face = "bold", size = 18),
+      axis.text.x = element_text(size = 10),
+      axis.text.y = element_text(size = 10),
+      axis.title = element_text(size = 14, face = "bold"),
       panel.background = element_blank(),
       axis.line = element_line(size = 0.5, linetype = "solid", colour = "black"),
-      legend.text = element_text(size = 16),
-      legend.title = element_text(size = 18),
+      legend.text = element_text(size = 12),
+      legend.title = element_text(size = 14),
       legend.position = "right", legend.box = "vertical"
     ) 
+dev.off()
 ```
 
 ### Phylogenetic diversity
@@ -325,9 +329,11 @@ beta_q1p$S %>%
   ggplot(aes(x = NMDS1, y = NMDS2, color = Origin, fill = Origin)) +
       scale_color_manual(name="Origin",
           breaks=c("Tame","Feral"),
+          labels=c("Domestic","Feral"),
           values=c("#6A9AC3","#F3B942")) +
       scale_fill_manual(name="Origin",
           breaks=c("Tame","Feral"),
+          labels=c("Domestic","Feral"),
           values=c("#6A9AC350","#F3B94250")) +
     geom_point(size = 4) +
     #   stat_ellipse(aes(color = beta_q1n_nmds$Groups))+
@@ -372,9 +378,11 @@ beta_q1f$S %>%
   ggplot(aes(x = NMDS1, y = NMDS2, color = Origin, fill = Origin)) +
       scale_color_manual(name="Origin",
           breaks=c("Tame","Feral"),
+          labels=c("Domestic","Feral"),
           values=c("#6A9AC3","#F3B942")) +
       scale_fill_manual(name="Origin",
           breaks=c("Tame","Feral"),
+          labels=c("Domestic","Feral"),
           values=c("#6A9AC350","#F3B94250")) +
     geom_point(size = 4) +
     #   stat_ellipse(aes(color = beta_q1n_nmds$Groups))+
