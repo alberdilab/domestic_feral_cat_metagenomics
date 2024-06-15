@@ -22,7 +22,6 @@ sample_metadata$Condition = recode(sample_metadata$Origin,
 read_counts <- read_tsv("data/read_counts.tsv") %>%
     rename(genome=1) %>%
     dplyr::select(c("genome",sample_metadata$sample))
-genomes<-read_counts$genome
 ```
 
 ### Genome coverage
@@ -31,7 +30,7 @@ genomes<-read_counts$genome
 genome_coverage <- read_tsv("data/genome_coverage.tsv") %>%
     rename(genome=1) %>%
     dplyr::select(c("genome",sample_metadata$sample))%>%
-  arrange(match(genome, genomes))
+  arrange(match(genome, read_counts$genome))
 ```
 
 ### Genome metadata
@@ -45,7 +44,7 @@ genome_metadata <- read_csv("data/genome_metadata.csv") %>%
         phylum == "Firmicutes_C" ~ "Bacillota_C",
         phylum == "Proteobacteria" ~ "Pseudomonadota",
         TRUE ~ phylum))%>%
-  arrange(match(genome, genomes))
+  arrange(match(genome, read_counts$genome))
 ```
 
 ### Genome tree

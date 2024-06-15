@@ -4,6 +4,7 @@
 
 ```{r load_data_hmsc_setup}
 load("data/data_arrange.Rdata")
+load("data/data.Rdata")
 ```
 
 ```{r hmsc_input, warning=FALSE, comments="", message=FALSE}
