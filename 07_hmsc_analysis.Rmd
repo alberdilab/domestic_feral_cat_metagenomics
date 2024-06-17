@@ -3,7 +3,7 @@
 ## Load data
 
 ```{r load_data_hmsc_analysis}
-load("data/data_arrange.Rdata")
+load("data/data.Rdata")
 load("hmsc/fit_model1_250_10.Rdata")
 ```
 
@@ -37,9 +37,9 @@ varpart_table <- varpart$vals %>%
    mutate(variable=factor(variable, levels=rev(c("origin","sex","logseqdepth","Random: location"))))
 
 #Phyla
-phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
+phylum_groups <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
     mutate(phylum=str_remove_all(phylum, "p__"))%>%
-  right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
+   right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
     filter(genome %in% varpart_tree$tip.label) %>%
     arrange(match(genome, varpart_tree$tip.label)) %>%
     mutate(phylum = factor(phylum, levels = unique(phylum))) %>%
@@ -63,7 +63,7 @@ varpart_tree <- varpart_tree %>%
         ggtree(., size = 0.3)
 
 # Add phylum colors next to the tree tips
-varpart_tree <- gheatmap(varpart_tree, phylum_colors, offset=-0.2, width=0.1, colnames=FALSE) +
+varpart_tree <- gheatmap(varpart_tree, phylum_groups, offset=-0.2, width=0.1, colnames=FALSE) +
    scale_fill_manual(values=colors_alphabetic)+
       labs(fill="Phylum")
 
@@ -88,6 +88,7 @@ vertical_tree
 ```
 
 ## Posterior estimates
+
 ```{r hmsc_postestimates, warning=FALSE, comments="", message=FALSE}
 # Select desired support threshold
 support=0.9
@@ -112,7 +113,7 @@ post_beta <- getPostEstimate(hM=m, parName="Beta")$support %>%
     column_to_rownames(var="genome")
 
 #Phylums
-phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
+phylum_groups <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
     mutate(phylum=str_remove_all(phylum, "p__")) %>%
     right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
     filter(genome %in% postestimates_tree$tip.label) %>%
@@ -138,7 +139,7 @@ postestimates_tree <- postestimates_tree %>%
         ggtree(., size = 0.3)
 
 #Add phylum colors next to the tree tips
-postestimates_tree <- gheatmap(postestimates_tree, phylum_colors, offset=-0.2, width=0.1, colnames=FALSE) +
+postestimates_tree <- gheatmap(postestimates_tree, phylum_groups, offset=-0.2, width=0.1, colnames=FALSE) +
       scale_fill_manual(values=colors_alphabetic)+
       labs(fill="Phylum")
 
@@ -155,73 +156,22 @@ postestimates_tree +
         vexpand(.25, 1) # expand top 
 ```
 
-### Origin
+### Association with cat origin
 
-#### Positively associated genomes with domestic cats
-
-```{r hmsc_positive_origin, warning=FALSE, comments="", message=FALSE}
-getPostEstimate(hM=m, parName="Beta")$support %>%
-    as.data.frame() %>%
-    mutate(variable=m$covNames) %>%
-    pivot_longer(!variable, names_to = "genome", values_to = "value") %>%
-    mutate(trend = case_when(
-          value >= support ~ "Positive",
-          value <= negsupport ~ "Negative",
-          TRUE ~ "Neutral")) %>%
-    filter(variable=="originTame", trend=="Positive") %>%
-    arrange(-value) %>%
-    left_join(genome_metadata,by=join_by(genome==genome)) %>%
-    dplyr::select(genome,phylum,class,order,family,species,value) %>%
-    arrange(phylum, class, family, species)%>%
-  paged_table()
-```
-
-#### Positively associated genomes feral cats
-
-```{r hmsc_negative_origin, warning=FALSE, comments="", message=FALSE}
-getPostEstimate(hM=m, parName="Beta")$support %>%
-    as.data.frame() %>%
-    mutate(variable=m$covNames) %>%
-    pivot_longer(!variable, names_to = "genome", values_to = "value") %>%
-    mutate(trend = case_when(
-          value >= support ~ "Positive",
-          value <= negsupport ~ "Negative",
-          TRUE ~ "Neutral")) %>%
-    filter(variable=="originTame", trend=="Negative") %>%
-    arrange(value) %>%
-    left_join(genome_metadata,by=join_by(genome==genome)) %>%
-    dplyr::select(genome,phylum,class,order,family,species,value) %>%
-    arrange(phylum,class,family,species)%>%
-  paged_table()
-
-```
-
-#### Estimate - support plot
 ```{r hmsc_support_plot_origin, warning=FALSE, comments="", message=FALSE}
 estimate <- getPostEstimate(hM=m, parName="Beta")$mean %>%
     as.data.frame() %>%
     mutate(variable=m$covNames) %>%
-    filter(variable=="originTame") %>%
+    filter(variable=="originFeral") %>%
     pivot_longer(!variable, names_to = "genome", values_to = "mean") %>%
     dplyr::select(genome,mean)
 
 support <- getPostEstimate(hM=m, parName="Beta")$support %>%
     as.data.frame() %>%
     mutate(variable=m$covNames) %>%
-    filter(variable=="originTame") %>%
+    filter(variable=="originFeral") %>%
     pivot_longer(!variable, names_to = "genome", values_to = "support") %>%
     dplyr::select(genome,support)
-
-phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
-    mutate(phylum=str_remove_all(phylum, "p__")) %>%
-  right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
-  filter(genome %in% estimate$genome) %>%
-  arrange(match(genome, estimate$genome)) %>%
-  dplyr::select(phylum, colors) %>%
-  unique() %>%
-  arrange(phylum) %>%
-  dplyr::select(colors) %>%
-  pull()
 
 #pdf("figures/sig_Mags_violin.pdf",width=10, height=8)
 inner_join(estimate,support,by=join_by(genome==genome)) %>%
@@ -235,70 +185,13 @@ inner_join(estimate,support,by=join_by(genome==genome)) %>%
       geom_vline(xintercept = 0) +
       xlim(c(-0.4,0.4)) +
       labs(x = "Beta regression coefficient", y = "Posterior probability") +
-      theme_minimal()+
-       theme(legend.position = "none")
-#dev.off()
+      theme_minimal()
 ```
 
+#### Associated with domestic cats
 
-#### Correlations
-
-```{r hmsc_correlations, warning=FALSE, comments="", message=FALSE}
-#Compute the residual correlation matrix
-OmegaCor = computeAssociations(m)
-
-# Refernece tree (for sorting genomes)
-genome_tree_subset <- genome_tree %>%
-        keep.tip(., tip=m$spNames) 
-
-
-#Co-occurrence matrix at the animal level
-supportLevel = 0.95
-toPlot = ((OmegaCor[[1]]$support>supportLevel)
-          + (OmegaCor[[1]]$support<(1-supportLevel))>0)*OmegaCor[[1]]$mean
-
-matrix <- toPlot %>% 
-      as.data.frame() %>%
-      rownames_to_column(var="genome1") %>%
-      pivot_longer(!genome1, names_to = "genome2", values_to = "cor") %>%
-      mutate(genome1= factor(genome1, levels=genome_tree_subset$tip.label)) %>%
-      mutate(genome2= factor(genome2, levels=genome_tree_subset$tip.label)) %>%
-      ggplot(aes(x = genome1, y = genome2, fill = cor)) +
-            geom_tile() + 
-            scale_fill_gradient2(low = "#be3e2b",
-                       mid = "#f4f4f4",
-                       high = "#b2b530")+
-            theme_void()
-
-htree <- genome_tree_subset %>%
-  force.ultrametric(.,method="extend") %>%
-  ggtree(.)
-
-vtree <- genome_tree_subset %>%
-  force.ultrametric(.,method="extend") %>%
-  ggtree(.)
-  
-#create composite figure
-grid.arrange(grobs = list(matrix,vtree),
-             layout_matrix = rbind(c(2,1,1,1,1,1,1,1,1,1,1,1),
-                                   c(2,1,1,1,1,1,1,1,1,1,1,1),
-                                   c(2,1,1,1,1,1,1,1,1,1,1,1),
-                                   c(2,1,1,1,1,1,1,1,1,1,1,1),
-                                   c(2,1,1,1,1,1,1,1,1,1,1,1),
-                                   c(2,1,1,1,1,1,1,1,1,1,1,1),
-                                   c(2,1,1,1,1,1,1,1,1,1,1,1),
-                                   c(2,1,1,1,1,1,1,1,1,1,1,1),
-                                   c(2,1,1,1,1,1,1,1,1,1,1,1),
-                                   c(2,1,1,1,1,1,1,1,1,1,1,1),
-                                   c(2,1,1,1,1,1,1,1,1,1,1,1)))
-```
-
-
-
-```{r sig_mag_Table, warning=FALSE, echo=FALSE, comments="", message=FALSE}
-# Overall species prediction
-
-Test <- getPostEstimate(hM=m, parName="Beta")$support %>%
+```{r hmsc_positive_origin, warning=FALSE, comments="", message=FALSE}
+getPostEstimate(hM=m, parName="Beta")$support %>%
     as.data.frame() %>%
     mutate(variable=m$covNames) %>%
     pivot_longer(!variable, names_to = "genome", values_to = "value") %>%
@@ -306,23 +199,71 @@ Test <- getPostEstimate(hM=m, parName="Beta")$support %>%
           value >= support ~ "Positive",
           value <= negsupport ~ "Negative",
           TRUE ~ "Neutral")) %>%
-    filter(variable=="originTame")
-
-pred_species <- constructGradient(m, 
-                      focalVariable = "origin", 
-                      non.focalVariables = 1, 
-                      ngrid=gradientlength) %>%
-             predict(m, Gradient = ., expected = TRUE) %>%
-             as.data.frame() %>%
-             mutate(origin=c("Tame","Feral")) %>%
-             pivot_longer(!origin, names_to = "genome", values_to = "value") %>%
-             mutate(genome = sub("(.*\\..*\\.)[^.]+.*", "\\1", genome)) %>% #remove iteration suffix
-             mutate(genome =  sub("\\.$", "", genome)) %>% 
-   left_join(Test, by=join_by(genome==genome))%>%
-  filter(trend != "Neutral")
+    filter(variable=="originFeral", trend=="Negative") %>%
+    arrange(-value) %>%
+    left_join(genome_metadata,by=join_by(genome==genome)) %>%
+    dplyr::select(genome,phylum,class,order,family,species,value) %>%
+    arrange(phylum, class, family, species)%>%
+  paged_table()
 ```
+
+#### Associated with feral cats
+
+```{r hmsc_negative_origin, warning=FALSE, comments="", message=FALSE}
+getPostEstimate(hM=m, parName="Beta")$support %>%
+    as.data.frame() %>%
+    mutate(variable=m$covNames) %>%
+    pivot_longer(!variable, names_to = "genome", values_to = "value") %>%
+    mutate(trend = case_when(
+          value >= support ~ "Positive",
+          value <= negsupport ~ "Negative",
+          TRUE ~ "Neutral")) %>%
+    filter(variable=="originFeral", trend=="Positive") %>%
+    arrange(value) %>%
+    left_join(genome_metadata,by=join_by(genome==genome)) %>%
+    dplyr::select(genome,phylum,class,order,family,species,value) %>%
+    arrange(phylum,class,family,species)%>%
+  paged_table()
+
+```
+
+## Microbiome composition predictions
+
+Support values of the cat origin variable per genome are interpreted as enrichment for domestic or feral cats.
+
+```{r hmsc_origin_enrichment, warning=FALSE, echo=FALSE, comments="", message=FALSE}
+origin_enrichment <- getPostEstimate(hM=m, parName="Beta")$support %>%
+    as.data.frame() %>%
+    mutate(variable=m$covNames) %>%
+    pivot_longer(!variable, names_to = "genome", values_to = "value") %>%
+    mutate(enrichment = case_when(
+          value >= support ~ "Feral",
+          value <= negsupport ~ "Domestic",
+          TRUE ~ "Neutral")) %>%
+    filter(variable=="originFeral") %>%
+    select(genome, enrichment)
+```
+
+The most likely microbiome compositions are predicted for domestic and feral cats based on the hmsc models
+
+```{r prediction, warning=FALSE, echo=FALSE, comments="", message=FALSE}
+gradient = c("domestic","feral")
+gradientlength = length(gradient)
+
+prediction <- constructGradient(m, 
+                      focalVariable = "origin", 
+                      non.focalVariables = 1) %>%
+            predict(m, Gradient = ., expected = TRUE) %>%
+            do.call(rbind,.) %>%
+            as.data.frame() %>%
+            mutate(origin=rep(gradient,1000)) %>%
+            pivot_longer(!origin,names_to = "genome", values_to = "value")
+```
+
+Log-abundance differences between domestic and feral cats are plotted for genomes found enriched for either origin.
+
 ```{r sig_mag_plot, comment="", echo=FALSE, message=FALSE, warning=FALSE, fig.height=8, fig.width=10, fig.fullwidth=TRUE}
-phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
+phylum_groups <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
     mutate(phylum=str_remove_all(phylum, "p__")) %>%
     right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
     filter(genome %in% genome_tree$tip.label) %>%
@@ -342,58 +283,32 @@ colors_alphabetic <- read_tsv("https://raw.githubusercontent.com/earthhologenome
     dplyr::select(colors) %>%
     pull()
 
-
-genome_metadata1<- genome_metadata
-genome_metadata1 <- genome_metadata1 %>%  
+genome_metadata_clean <- genome_metadata %>%  
     mutate(family = coalesce(family, paste('Unclassified', order)),
            genus = coalesce(genus, 
                               if_else(grepl('^Unclassified', family),
                                       family, paste('Unclassified', family))))
 
-
-
-
-#pdf("figures/sig_Mags.pdf",width=9, height=10)
-pred_species %>%
-      pivot_wider(names_from = origin, values_from = value.x) %>%
-      unnest(c(`Tame`, `Feral`)) %>%
-      mutate(diff_dom.feral = `Tame` - `Feral`) %>%
+prediction %>%
+  left_join(origin_enrichment,by="genome") %>% 
+      filter(enrichment != "Neutral") %>% 
+      pivot_wider(names_from = origin, values_from = value) %>%
+      unnest(c(domestic, feral)) %>%
+      mutate(diff_dom.feral = domestic - feral) %>%
       select(genome, diff_dom.feral) %>%
-      left_join(genome_metadata1, by=join_by(genome==genome)) %>%
+      left_join(genome_metadata_clean, by="genome") %>%
       mutate(genome= factor(genome, levels=genome_tree$tip.label)) %>%
       ggplot(., aes(y=forcats::fct_reorder(genus,diff_dom.feral), x=diff_dom.feral, fill=phylum, color=phylum)) +
             geom_boxplot(outlier.shape = NA) +
-          scale_color_manual(values=colors_alphabetic)+
-            scale_fill_manual(values=colors_alphabetic)+
+            scale_color_manual(values=phylum_colors)+
+            scale_fill_manual(values=phylum_colors)+
           geom_vline(xintercept = 0)+
           theme_classic()+
   labs(x = "Log-abundance difference", y = "Genera")
-#dev.off()
-
 
 ```
 
-#### Predict responses (origin)
-
-```{r hmsc_predictions, warning=FALSE, comments="", message=FALSE}
-
-# Select modelchain of interest
-load("hmsc/fit_model1_250_10.Rdata")
-
-gradient = c("domestic","feral")
-gradientlength = length(gradient)
-
-#Treatment-specific gradient predictions
-pred <- constructGradient(m, 
-                      focalVariable = "origin", 
-                      non.focalVariables = list(logseqdepth=list(1),location=list(1))) %>%
-            predict(m, Gradient = ., expected = TRUE) %>%
-            do.call(rbind,.) %>%
-            as.data.frame() %>%
-            mutate(origin=rep(gradient,1000)) %>%
-            pivot_longer(!origin,names_to = "genome", values_to = "value")
-```
-
+## Functional predictions
 
 #### Element level
 
@@ -402,7 +317,8 @@ elements_table <- genome_gifts %>%
     to.elements(., GIFT_db) %>%
     as.data.frame()
 
-community_elements <- pred %>%
+#Calculate community-level functional traits for predicted communities
+community_elements <- prediction %>%
   group_by(origin, genome) %>%
   mutate(row_id = row_number()) %>%
   pivot_wider(names_from = genome, values_from = value) %>%
@@ -508,6 +424,7 @@ element_gift_filt %>%
   rownames_to_column(., "Elements")  %>%
   left_join(.,uniqueGIFT_db[c(1,3)],by = join_by(Elements == Code_element))
 ```
+
 ```{r elements_post_plot, comment="", echo=FALSE, message=FALSE, warning=FALSE, eval=FALSE}
 element_gift_names <- element_gift_filt%>%
   select(-Origin)%>%

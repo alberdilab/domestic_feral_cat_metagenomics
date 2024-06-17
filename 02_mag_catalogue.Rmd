@@ -1,7 +1,7 @@
 # MAG catalogue
 
 ```{r load_data_mag, message=FALSE, warning=FALSE}
-load("data/data_arrange.Rdata")
+load("data/data.Rdata")
 ```
 
 ## Genome phylogeny
@@ -210,40 +210,18 @@ function_ordination <- tSNE_function$Y %>%
 function_ordination
 ```
 
-
-```{r phyloseq, comment="", echo=FALSE, message=FALSE, warning=FALSE}
-#Phyloseq object
-count_phy <- genome_counts %>%
-  column_to_rownames(var="genome")%>%
-  otu_table(., taxa_are_rows=T)
-
-sample_info_tab_phy <- sample_metadata%>%
-  column_to_rownames(var="sample")%>%
-  sample_data()
-
-TAX <- genome_metadata%>%
-  column_to_rownames(var="genome")%>%
-  select(1:7)%>%
-  as.matrix()%>%
-  tax_table()
-tree <- phy_tree(genome_tree)
-
-physeq_all = phyloseq(count_phy, TAX, sample_info_tab_phy, tree)
-```
-
-## MAGs in different locations and shared among locations
+## MAGs shared across locations
 
 ```{r chart1, comment="", echo=FALSE, message=FALSE, warning=FALSE}
-locationcolors=c('#c4d7d1','#408892','#2d3749','#c04062','#6b3a59','#e08683')
 
-genome_counts_rel <- genome_counts %>%
+genome_counts_rel <- genome_counts_filt %>%
   mutate_at(vars(-genome),~./sum(.)) %>%
   column_to_rownames(., "genome")
   
 genome_counts_rel_pa=1*(genome_counts_rel>0)
 #MAGrel_pa[1:6,1:6]
-table_upset_analysis_cont=t(aggregate(t(genome_counts_rel_pa),by=list(sample_metadata$Location),FUN=sum)[,-1])
-colnames(table_upset_analysis_cont)=levels(as.factor(sample_metadata$Location))
+table_upset_analysis_cont=t(aggregate(t(genome_counts_rel_pa),by=list(sample_metadata$location),FUN=sum)[,-1])
+colnames(table_upset_analysis_cont)=levels(as.factor(sample_metadata$location))
 table_upset_analysis=(table_upset_analysis_cont>0)*1
 table_upset_analysis=data.frame(table_upset_analysis)
 table_upset_analysis=apply(table_upset_analysis,2,as.integer)
@@ -252,8 +230,8 @@ rownames(table_upset_analysis) <- rownames(genome_counts_rel_pa)
 #pdf("figures/MAG_intersection.pdf",width=8,height=6, onefile=F)
 upset(as.data.frame(table_upset_analysis),
   keep.order = T,
-  sets = rev(c("Aruba","Brazil","CaboVerde","Denmark","Malaysia","Spain")),
-  sets.bar.color= rev(locationcolors),
+  sets = rev(c("Aruba","Brazil","CaboVerde","Spain","Denmark","Malaysia")),
+  sets.bar.color= rev(location_colors),
   mb.ratio = c(0.55, 0.45), order.by = "freq")
 #dev.off()
 ```

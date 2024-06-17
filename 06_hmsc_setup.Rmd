@@ -10,8 +10,7 @@ load("data/data.Rdata")
 ```{r hmsc_input, warning=FALSE, comments="", message=FALSE}
 # Random effects data (study design)
 StudyDesign <- sample_metadata %>%
-                    dplyr::select(sample,Location) %>% 
-                    rename(location=Location) %>% 
+                    dplyr::select(sample,location) %>% 
                     column_to_rownames("sample") %>% 
                     mutate(location = factor(location))
 
@@ -34,7 +33,6 @@ XData <- sample_metadata %>%
                         colSums() %>% 
                         log()
                     ) %>% 
-                    rename(origin=Origin, sex=F.M) %>% 
                     mutate(origin = factor(origin)) %>%
                     mutate(sex = factor(sex)) %>% 
                     dplyr::select(origin, sex, logseqdepth)
@@ -193,5 +191,5 @@ mkdir -p "$tmpdir"
 export TMPDIR="$tmpdir"
 
 #Or launch them one by one only the ones you want to launch
-sbatch exe_model1_250_1.sh
+sbatch exe_model1_250_10.sh
 ```

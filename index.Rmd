@@ -72,6 +72,7 @@ library(gridExtra)
 library(ggtreeExtra)
 library(ggtree)
 library(ggh4x)
+library(UpSetR)
 
 # For statistics
 library(spaa)

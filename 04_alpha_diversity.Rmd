@@ -1,7 +1,7 @@
 # Alpha diversity
 
 ```{r load_data_alpha}
-load("data/data_arrange.Rdata")
+load("data/data.Rdata")
 ```
 
 ```{r alpha_div, comment="", message=FALSE, warning=FALSE}
@@ -60,27 +60,27 @@ alpha_div <- richness %>%
 ```{r}
 richness_mean <- alpha_div %>%
   left_join(sample_metadata, by = join_by(sample == sample))%>%
-  group_by(Location) %>%
+  group_by(location) %>%
   dplyr::summarise_at(.vars = names(.)[2], .funs = c("Richness mean" = "mean", "Richness sd" = "sd"))
 
 neutral_mean <- alpha_div %>%
   left_join(sample_metadata, by = join_by(sample == sample))%>%
-  group_by(Location) %>%
+  group_by(location) %>%
   dplyr::summarise_at(.vars = names(.)[3], .funs = c("Neutral mean" = "mean", "Neutral sd" = "sd"))
 
 phylogenetic_mean <- alpha_div %>%
   left_join(sample_metadata, by = join_by(sample == sample))%>%
-  group_by(Location) %>%
+  group_by(location) %>%
   dplyr::summarise_at(.vars = names(.)[4], .funs = c("Phylogenetic mean" = "mean", "Phylogenetic sd" = "sd"))
 
 cbind(richness_mean, neutral_mean[, 2:3], phylogenetic_mean[, 2:3])%>%
   tt()
 ```
+
 ```{r}
-alpha_colors <- c('#c4d7d1','#408892','#2d3749','#c04062','#6b3a59','#e08683')
 group_n <- alpha_div %>%
   left_join(., sample_metadata, by = join_by(sample == sample))%>%
-  select(Location) %>%
+  select(location) %>%
   pull() %>%
   unique() %>%
   length()
@@ -88,13 +88,13 @@ group_n <- alpha_div %>%
 #pdf("figures/diversity_location.pdf",width=20, height=9)
 alpha_div %>%
   pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
-  left_join(., sample_metadata, by = join_by(sample == sample)) %>%
+  left_join(sample_metadata, by = "sample") %>%
   mutate(metric=factor(metric,levels=c("richness","neutral","phylogenetic","functional"))) %>%
-  ggplot(aes(y = value, x = Location, group=Location,color=Location,fill=Location)) +
+  ggplot(aes(y = value, x = location, group=location, color=location, fill=location)) +
   geom_boxplot(outlier.shape = NA, show.legend = FALSE) +
   geom_jitter(alpha=0.5) +
-  scale_color_manual(values = alpha_colors[c(1:group_n)]) +
-  scale_fill_manual(values = paste0(alpha_colors[c(1:group_n)], "50")) +
+  scale_color_manual(values = location_colors) +
+  scale_fill_manual(values = str_c(location_colors, "50")) +
   facet_wrap(. ~ metric, scales = "free", ncol=4) +
   coord_cartesian(xlim = c(1, NA)) +
   theme_classic() +
@@ -163,21 +163,15 @@ emmeans(Modelq1F_Loca, pairwise ~ Location)
 ```{r alpha_div_rich_boxplot, comment="", message=FALSE, warning=FALSE, fig.height=3, fig.width=10, fig.fullwidth=TRUE}
 alpha_div %>%
   pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
-  left_join(., sample_metadata, by = join_by(sample == sample)) %>%
-  filter(!is.na(Location)) %>%
+  left_join(sample_metadata, by = "sample") %>%
+  filter(!is.na(location)) %>%
   filter(metric=="richness") %>%
-      ggplot(aes(y = value, x = Origin, group=Origin, color=Origin, fill=Origin)) +
+      ggplot(aes(y = value, x = origin, group=origin, color=origin, fill=origin)) +
       geom_boxplot(outlier.shape = NA) +
       geom_jitter(width = 0.1, alpha=0.5) +
-      scale_color_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          labels=c("Domestic","Feral"),
-          values=c("#6A9AC3","#F3B942")) +
-      scale_fill_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          labels=c("Domestic","Feral"),
-          values=c("#6A9AC350","#F3B94250")) +
-      facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
+      scale_color_manual(values = origin_colors) +
+      scale_fill_manual(values = str_c(origin_colors, "50")) +
+      facet_wrap(. ~ location, scales = "fixed", ncol=6) +
       coord_cartesian(xlim = c(1, NA)) +
       theme_classic() +
       theme(
@@ -194,30 +188,23 @@ alpha_div %>%
 #pdf("figures/alpha_q1n_behaviour.pdf",width=9, height=5)
 alpha_div %>%
   pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
-  left_join(., sample_metadata, by = join_by(sample == sample)) %>%
-  filter(!is.na(Location)) %>%
+  left_join(sample_metadata, by = "sample") %>%
+  filter(!is.na(location)) %>%
   filter(metric=="neutral") %>%
-      ggplot(aes(y = value, x = Origin, group=Origin, color=Origin, fill=Origin)) +
+      ggplot(aes(y = value, x = origin, group=origin, color=origin, fill=origin)) +
       geom_boxplot(outlier.shape = NA) +
       geom_jitter(width = 0.1, alpha=0.5) +
-      scale_color_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          labels=c("Domestic","Feral"),
-          values=c("#6A9AC3","#F3B942")) +
-      scale_fill_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          labels=c("Domestic","Feral"),
-          values=c("#6A9AC350","#F3B94250")) +
-      facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
+      scale_color_manual(values = origin_colors) +
+      scale_fill_manual(values = str_c(origin_colors, "50")) +
+      facet_wrap(. ~ location, scales = "fixed", ncol=6) +
       coord_cartesian(xlim = c(1, NA)) +
       theme_classic() +
       theme(
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank(),
         strip.background = element_blank(),
         panel.grid.minor.x = element_line(size = .1, color = "grey"),
         axis.title.x = element_blank(),
         axis.title.y = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1)
       )
 #dev.off()
 ```
@@ -228,30 +215,23 @@ alpha_div %>%
 #pdf("figures/alpha_q1p_behaviour.pdf",width=9, height=5)
 alpha_div %>%
   pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
-  left_join(., sample_metadata, by = join_by(sample == sample)) %>%
-  filter(!is.na(Location)) %>%
+  left_join(sample_metadata, by = "sample") %>%
+  filter(!is.na(location)) %>%
   filter(metric=="phylogenetic") %>%
-      ggplot(aes(y = value, x = Origin, group=Origin, color=Origin, fill=Origin)) +
+      ggplot(aes(y = value, x = origin, group=origin, color=origin, fill=origin)) +
       geom_boxplot(outlier.shape = NA) +
       geom_jitter(width = 0.1, alpha=0.5) +
-      scale_color_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          labels=c("Domestic","Feral"),
-          values=c("#6A9AC3","#F3B942")) +
-      scale_fill_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          labels=c("Domestic","Feral"),
-          values=c("#6A9AC350","#F3B94250")) +
-      facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
+      scale_color_manual(values = origin_colors) +
+      scale_fill_manual(values = str_c(origin_colors, "50")) +
+      facet_wrap(. ~ location, scales = "fixed", ncol=6) +
       coord_cartesian(xlim = c(1, NA)) +
       theme_classic() +
       theme(
-         axis.text.x = element_blank(),
-        axis.ticks.x = element_blank(),
         strip.background = element_blank(),
         panel.grid.minor.x = element_line(size = .1, color = "grey"),
         axis.title.x = element_blank(),
-        axis.title.y = element_blank()
+        axis.title.y = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1)
       )
 #dev.off()
 ```
@@ -261,21 +241,15 @@ alpha_div %>%
 
 alpha_div %>%
   pivot_longer(-sample, names_to = "metric", values_to = "value") %>%
-  left_join(., sample_metadata, by = join_by(sample == sample)) %>%
-  filter(!is.na(Location)) %>%
+  left_join(sample_metadata, by = "sample") %>%
+  filter(!is.na(location)) %>%
   filter(metric=="functional") %>%
-      ggplot(aes(y = value, x = Origin, group=Origin, color=Origin, fill=Origin)) +
+      ggplot(aes(y = value, x = origin, group=origin, color=origin, fill=origin)) +
       geom_boxplot(outlier.shape = NA) +
       geom_jitter(width = 0.1, alpha=0.5) +
-      scale_color_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          labels=c("Domestic","Feral"),
-          values=c("#6A9AC3","#F3B942")) +
-      scale_fill_manual(name="Origin",
-          breaks=c("Tame","Feral"),
-          labels=c("Domestic","Feral"),
-          values=c("#6A9AC350","#F3B94250")) +
-      facet_wrap(. ~ Location, scales = "fixed", ncol=6) +
+      scale_color_manual(values = origin_colors) +
+      scale_fill_manual(values = str_c(origin_colors, "50")) +
+      facet_wrap(. ~ location, scales = "fixed", ncol=6) +
       coord_cartesian(xlim = c(1, NA)) +
       theme_classic() +
       theme(

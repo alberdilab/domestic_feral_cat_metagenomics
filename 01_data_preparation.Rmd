@@ -7,30 +7,9 @@ Load the original data files outputted by the bioinformatic pipeline.
 ### Sample metadata
 
 ```{r load_sample_metadata, warning=FALSE, comments="", message=FALSE}
-sample_metadata <- read_csv("data/sample_metadata.csv") %>%
-    rename(sample=CombinedID)
-#    %>%rename(Origin=Condition)%>%
-#    rename(F.M=Sex)
-
-sample_metadata$Condition = recode(sample_metadata$Origin,
-                 Tame = "Domestic")
-```
-
-### Read counts
-
-```{r load_read_counts, warning=FALSE, comments="", message=FALSE}
-read_counts <- read_tsv("data/read_counts.tsv") %>%
-    rename(genome=1) %>%
-    dplyr::select(c("genome",sample_metadata$sample))
-```
-
-### Genome coverage
-
-```{r load_genome_hits, warning=FALSE, comments="", message=FALSE}
-genome_coverage <- read_tsv("data/genome_coverage.tsv") %>%
-    rename(genome=1) %>%
-    dplyr::select(c("genome",sample_metadata$sample))%>%
-  arrange(match(genome, read_counts$genome))
+sample_metadata <- read_csv("data/sample_metadata.csv") %>% 
+  mutate(location=factor(location,levels=c("Aruba","Brazil","CaboVerde","Spain","Denmark","Malaysia")),
+         origin=factor(origin,levels=c("Domestic","Feral")))
 ```
 
 ### Genome metadata
@@ -43,8 +22,25 @@ genome_metadata <- read_csv("data/genome_metadata.csv") %>%
         phylum == "Firmicutes_A" ~ "Bacillota_A",
         phylum == "Firmicutes_C" ~ "Bacillota_C",
         phylum == "Proteobacteria" ~ "Pseudomonadota",
-        TRUE ~ phylum))%>%
-  arrange(match(genome, read_counts$genome))
+        TRUE ~ phylum))
+```
+
+### Read counts
+
+```{r load_read_counts, warning=FALSE, comments="", message=FALSE}
+read_counts <- read_tsv("data/read_counts.tsv") %>%
+    rename(genome=1) %>%
+    select(c("genome",sample_metadata$sample)) %>%
+    arrange(match(genome,genome_metadata$genome))
+```
+
+### Genome coverage
+
+```{r load_genome_hits, warning=FALSE, comments="", message=FALSE}
+genome_coverage <- read_tsv("data/genome_coverage.tsv") %>%
+    rename(genome=1) %>%
+    select(c("genome",sample_metadata$sample))%>%
+    arrange(match(genome,genome_metadata$genome))
 ```
 
 ### Genome tree
@@ -81,8 +77,6 @@ read_counts_filt <- genome_coverage %>%
 readlength=150
 genome_counts <- read_counts %>%
   mutate(across(where(is.numeric), ~ . / (genome_metadata$length / readlength) ))
-
-#read_counts %>% select(-genome)%>% colSums()%>%as.data.frame() %>% rename(depth=".") %>% colSums()
 ```
 
 ```{r calculate_genome_counts_filtered, warning=FALSE, comments="", message=FALSE}
@@ -110,26 +104,29 @@ phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI
     unique() %>%
     arrange(phylum) %>%
     pull(colors, name=phylum)
+
+location_colors <- c('#3D5C61','#41B6C0','#90C8C5','#E5D388','#BFA366','#6E5244')
+
+origin_colors <- c("#bd70ae","#949293")
 ```
 
 ## Prepare a phyloseq object
 
-```{r phyloseq_objects, warning=FALSE, comments="", message=FALSE}
-phylo_samples <- sample_metadata %>% 
-  column_to_rownames("sample") %>% 
-  sample_data() #convert to phyloseq sample_data object
-phylo_genome <- genome_counts %>% 
-  column_to_rownames("genome") %>% 
-  otu_table(., taxa_are_rows = TRUE)
-phylo_taxonomy <- genome_metadata %>%
-  dplyr::select(c(1,5:10))%>%
-  column_to_rownames("genome") %>% 
-  as.matrix() %>% 
-  tax_table() #convert to phyloseq tax_table object
-
-physeq_genome <- phyloseq(phylo_genome, phylo_taxonomy, phylo_samples)
-physeq_genome_clr <- microbiome::transform(physeq_genome, 'clr')
-
+```{r phyloseq_objects, warning=FALSE, comments="", message=FALSE, eval=FALSE, echo=FALSE}
+# phylo_samples <- sample_metadata %>%
+#   column_to_rownames("sample") %>%
+#   sample_data() #convert to phyloseq sample_data object
+# phylo_genome <- genome_counts %>%
+#   column_to_rownames("genome") %>%
+#   otu_table(., taxa_are_rows = TRUE)
+# phylo_taxonomy <- genome_metadata %>%
+#   dplyr::select(c(1,5:10))%>%
+#   column_to_rownames("genome") %>%
+#   as.matrix() %>%
+#   tax_table() #convert to phyloseq tax_table object
+# 
+# physeq_genome <- phyloseq(phylo_genome, phylo_taxonomy, phylo_samples)
+# physeq_genome_clr <- microbiome::transform(physeq_genome, 'clr')
 ```
 
 
@@ -146,7 +143,9 @@ save(sample_metadata,
      genome_tree,
      genome_gifts, 
      phylum_colors,
-     physeq_genome,
-     physeq_genome_clr,
-     file = "data/data_arrange.Rdata")
+     location_colors,
+     origin_colors,
+#     physeq_genome,
+#     physeq_genome_clr,
+     file = "data/data.Rdata")
 ```
