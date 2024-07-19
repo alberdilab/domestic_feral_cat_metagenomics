@@ -6,7 +6,7 @@ Load the original data files outputted by the bioinformatic pipeline.
 
 ### Sample metadata
 
-```{r load_sample_metadata, warning=FALSE, comments="", message=FALSE}
+```{r load_sample_metadata, warning=FALSE, comments="", message=FALSE, eval=FALSE}
 sample_metadata <- read_csv("data/sample_metadata.csv") %>% 
   mutate(location=factor(location,levels=c("Aruba","Brazil","CaboVerde","Spain","Denmark","Malaysia")),
          origin=factor(origin,levels=c("Domestic","Feral")))
@@ -14,7 +14,7 @@ sample_metadata <- read_csv("data/sample_metadata.csv") %>%
 
 ### Genome metadata
 
-```{r load_genome_metadata, warning=FALSE, comments="", message=FALSE}
+```{r load_genome_metadata, warning=FALSE, comments="", message=FALSE, eval=FALSE}
 genome_metadata <- read_csv("data/genome_metadata.csv") %>%
     mutate(phylum = case_when(
         phylum == "Actinobacteriota" ~ "Actinomycetota",
@@ -27,7 +27,7 @@ genome_metadata <- read_csv("data/genome_metadata.csv") %>%
 
 ### Read counts
 
-```{r load_read_counts, warning=FALSE, comments="", message=FALSE}
+```{r load_read_counts, warning=FALSE, comments="", message=FALSE, eval=FALSE}
 read_counts <- read_tsv("data/read_counts.tsv") %>%
     rename(genome=1) %>%
     select(c("genome",sample_metadata$sample)) %>%
@@ -36,7 +36,7 @@ read_counts <- read_tsv("data/read_counts.tsv") %>%
 
 ### Genome coverage
 
-```{r load_genome_hits, warning=FALSE, comments="", message=FALSE}
+```{r load_genome_hits, warning=FALSE, comments="", message=FALSE, eval=FALSE}
 genome_coverage <- read_tsv("data/genome_coverage.tsv") %>%
     rename(genome=1) %>%
     select(c("genome",sample_metadata$sample))%>%
@@ -45,7 +45,7 @@ genome_coverage <- read_tsv("data/genome_coverage.tsv") %>%
 
 ### Genome tree
 
-```{r load_genome_tree, warning=FALSE, comments="", message=FALSE}
+```{r load_genome_tree, warning=FALSE, comments="", message=FALSE, eval=FALSE}
 genome_tree <- read_tree("data/genome_tree.tre")
 genome_tree$tip.label <- str_replace_all(genome_tree$tip.label,"'", "") #remove single quotes in MAG names
 genome_tree <- keep.tip(genome_tree, tip=genome_metadata$genome) # keep only MAG tips
@@ -53,7 +53,7 @@ genome_tree <- keep.tip(genome_tree, tip=genome_metadata$genome) # keep only MAG
 
 ### Genome annotations
 
-```{r load_genome_annotations, warning=FALSE, comments="", message=FALSE}
+```{r load_genome_annotations, warning=FALSE, comments="", message=FALSE, eval=FALSE}
 genome_annotations <- read_tsv("data/genome_annotations.tsv.xz") %>%
     rename(gene=1, genome=2, contig=3)
 ```
@@ -64,7 +64,7 @@ Transform the original data files into working objects for downstream analyses.
 
 ### Filter reads by coverage
 
-```{r filter_coverage, warning=FALSE, comments="", message=FALSE}
+```{r filter_coverage, warning=FALSE, comments="", message=FALSE, eval=FALSE}
 min_coverage=0.3
 read_counts_filt <- genome_coverage %>%
   mutate(across(where(is.numeric), ~ ifelse(. > min_coverage, 1, 0))) %>%
@@ -73,13 +73,13 @@ read_counts_filt <- genome_coverage %>%
 
 ### Transform reads into genome counts
 
-```{r calculate_genome_counts_unfiltered, warning=FALSE, comments="", message=FALSE}
+```{r calculate_genome_counts_unfiltered, warning=FALSE, comments="", message=FALSE, eval=FALSE}
 readlength=150
 genome_counts <- read_counts %>%
   mutate(across(where(is.numeric), ~ . / (genome_metadata$length / readlength) ))
 ```
 
-```{r calculate_genome_counts_filtered, warning=FALSE, comments="", message=FALSE}
+```{r calculate_genome_counts_filtered, warning=FALSE, comments="", message=FALSE, eval=FALSE}
 readlength=150
 genome_counts_filt <- read_counts_filt %>%
   mutate(across(where(is.numeric), ~ . / (genome_metadata$length / readlength) ))
@@ -87,7 +87,7 @@ genome_counts_filt <- read_counts_filt %>%
 
 ### Distill annotations into GIFTs 
 
-```{r distill_annotations, warning=FALSE, comments="", message=FALSE}
+```{r distill_annotations, warning=FALSE, comments="", message=FALSE, eval=FALSE}
 genome_gifts <- distill(genome_annotations,GIFT_db,genomecol=2,annotcol=c(9,10,19), verbosity=F)
 ```
 
@@ -95,7 +95,7 @@ genome_gifts <- distill(genome_annotations,GIFT_db,genomecol=2,annotcol=c(9,10,1
 
 [AlberdiLab](www.alberdilab.dk) projects use unified color schemes developed for the [Earth Hologenome Initiative](www.earthhologenome.org), to facilitate figure interpretation.
 
-```{r get_ehi_colors, warning=FALSE, comments="", message=FALSE}
+```{r get_ehi_colors, warning=FALSE, comments="", message=FALSE, eval=FALSE}
 phylum_colors <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
     mutate(phylum=str_remove_all(phylum, "p__")) %>%
     right_join(genome_metadata, by=join_by(phylum == phylum)) %>%
@@ -110,31 +110,11 @@ location_colors <- c('#3D5C61','#41B6C0','#90C8C5','#E5D388','#BFA366','#6E5244'
 origin_colors <- c("#bd70ae","#949293")
 ```
 
-## Prepare a phyloseq object
-
-```{r phyloseq_objects, warning=FALSE, comments="", message=FALSE, eval=FALSE, echo=FALSE}
-# phylo_samples <- sample_metadata %>%
-#   column_to_rownames("sample") %>%
-#   sample_data() #convert to phyloseq sample_data object
-# phylo_genome <- genome_counts %>%
-#   column_to_rownames("genome") %>%
-#   otu_table(., taxa_are_rows = TRUE)
-# phylo_taxonomy <- genome_metadata %>%
-#   dplyr::select(c(1,5:10))%>%
-#   column_to_rownames("genome") %>%
-#   as.matrix() %>%
-#   tax_table() #convert to phyloseq tax_table object
-# 
-# physeq_genome <- phyloseq(phylo_genome, phylo_taxonomy, phylo_samples)
-# physeq_genome_clr <- microbiome::transform(physeq_genome, 'clr')
-```
-
-
 ## Wrap working objects
 
 All working objects are wrapped into a single Rdata object to facilitate downstream usage.
 
-```{r wrap_working_objects, warning=FALSE, comments="", message=FALSE}
+```{r wrap_working_objects, warning=FALSE, comments="", message=FALSE, eval=FALSE}
 save(sample_metadata, 
      genome_metadata, 
      read_counts, 

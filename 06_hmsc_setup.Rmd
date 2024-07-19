@@ -3,7 +3,6 @@
 ## Setup
 
 ```{r load_data_hmsc_setup}
-load("data/data_arrange.Rdata")
 load("data/data.Rdata")
 ```
 
@@ -141,7 +140,11 @@ m = sampleMcmc(hM = model,
          transient = ceiling(0.5*sample*thin),
          nChains = nchains,
          nParallel = nchains)
-         
+
+# Run model cross-validation
+partition <- createPartition(m, nfolds = 5)
+cv <- computePredictedValues(m, partition=partition, nChains = 4)
+
 # Assess chain convergence
 mpost = convertToCodaObject(m, 
       spNamesNumbers = c(T,F), 
@@ -171,7 +174,7 @@ assign(paste0(\"psrf.rho.\", modelname,\"_\",sample,\"_\",thin), gelman.diag(mpo
 save(%s, %s, %s, file=convname)
 
 # Save model fit object
-save(m, file=fitname)
+save(m, cv, file=fitname)
 '
 ", jobname, minutes, modelname, model, fitname, convname, sample, thin, nChains, psrf.beta.name, psrf.gamma.name, psrf.rho.name)
       writeLines(code, executablename)

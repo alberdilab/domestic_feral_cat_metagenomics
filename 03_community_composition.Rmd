@@ -111,21 +111,6 @@ phylum_summary %>%
     tt()
 ```
 
-```{r taxonomy_phylum_plot, warning=FALSE, comments="", message=FALSE, fig.height=8, fig.width=10, fig.fullwidth=TRUE}
-phylum_summary %>%
-  filter(phylum %in% phylum_arrange) %>%
-  mutate(phylum=factor(phylum,levels=rev(phylum_arrange))) %>%
-  left_join(sample_metadata, by = join_by(sample == sample)) %>%
-    filter(relabun > 0) %>%
-  ggplot(aes(x=relabun, y=phylum, group=phylum, color=phylum, fill=phylum)) +
-  scale_color_manual(values=phylum_colors[rev(phylum_arrange)]) +
-        scale_fill_manual(values=phylum_colors[-8]) +
-        geom_boxplot(alpha=0.2)+
-        geom_jitter(alpha=0.5) + 
-        theme_minimal() + 
-        theme(legend.position="none") +
-        labs(y="Phylum",x="Relative abundance")
-```
 
 ```{r taxonomy_boxplot_phylum, warning=FALSE, comments="", message=FALSE, fig.height=8, fig.width=10, fig.fullwidth=TRUE}
 phylum_arrange <- phylum_summary %>%
@@ -158,6 +143,23 @@ phylum_summary %>%
               ) +
         labs(y="Phylum",x="Relative abundance")
 ```
+
+```{r taxonomy_phylum_plot, warning=FALSE, comments="", message=FALSE, fig.height=8, fig.width=10, fig.fullwidth=TRUE}
+phylum_summary %>%
+  filter(phylum %in% phylum_arrange) %>%
+  mutate(phylum=factor(phylum,levels=rev(phylum_arrange))) %>%
+  left_join(sample_metadata, by = join_by(sample == sample)) %>%
+    filter(relabun > 0) %>%
+  ggplot(aes(x=relabun, y=phylum, group=phylum, color=phylum, fill=phylum)) +
+  scale_color_manual(values=phylum_colors[rev(phylum_arrange)]) +
+        scale_fill_manual(values=phylum_colors[-8]) +
+        geom_boxplot(alpha=0.2)+
+        geom_jitter(alpha=0.5) + 
+        theme_minimal() + 
+        theme(legend.position="none") +
+        labs(y="Phylum",x="Relative abundance")
+```
+
 
 ### Family
 

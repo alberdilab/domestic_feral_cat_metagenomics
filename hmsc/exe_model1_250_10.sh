@@ -34,7 +34,11 @@ m = sampleMcmc(hM = model,
          transient = ceiling(0.5*sample*thin),
          nChains = nchains,
          nParallel = nchains)
-         
+
+# Run model cross-validation
+partition <- createPartition(m, nfolds = 5)
+cv <- computePredictedValues(m, partition=partition, nChains = 4)
+
 # Assess chain convergence
 mpost = convertToCodaObject(m, 
       spNamesNumbers = c(T,F), 
@@ -64,6 +68,6 @@ assign(paste0("psrf.rho.", modelname,"_",sample,"_",thin), gelman.diag(mpost$Rho
 save(psrf.beta.model1_250_10, psrf.gamma.model1_250_10, psrf.rho.model1_250_10, file=convname)
 
 # Save model fit object
-save(m, file=fitname)
+save(m, cv, file=fitname)
 '
 

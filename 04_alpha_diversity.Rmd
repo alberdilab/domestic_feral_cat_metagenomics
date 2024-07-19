@@ -120,39 +120,35 @@ alpha_div %>%
 library(MASS)
 alpha_div_meta <- alpha_div %>%
   left_join(sample_metadata, by = join_by(sample == sample))
-Modelq0_all <- MASS::glm.nb(richness ~ Location+Age+F.M+Bites+Hisses+Retreats+Vocalization+Acceptance+Sedating+Healthy+Dry_skin+Stiff+Agile, data = alpha_div_meta,trace=TRUE)
-anova(Modelq0_all)
-Modelq0_Loca <- MASS::glm.nb(richness ~ Location, data = alpha_div_meta,trace=TRUE)
+Modelq0_Loca <- MASS::glm.nb(richness ~ location, data = alpha_div_meta,trace=TRUE)
 anova(Modelq0_Loca)
 r.squaredGLMM(Modelq0_Loca)
-emmeans(Modelq0_Loca, pairwise ~ Location)
+emmeans(Modelq0_Loca, pairwise ~ location)
 detach("package:MASS", unload = TRUE)
 ```
 
 ***Neutral***
 ```{r model_neutral, comment="", message=FALSE, warning=FALSE}
-#Modelq1_all <- lm(formula = neutral ~ Location+Age+F.M+Bites+Hisses+Retreats+Vocalization+Acceptance+Sedating+Healthy+Dry_skin+Stiff+Agile, data = alpha_div_meta)
-#anova(Modelq1_all)
-Modelq1_Loca <- lm(formula = neutral ~ Location, data = alpha_div_meta) 
+Modelq1_Loca <- lm(formula = neutral ~ location, data = alpha_div_meta) 
 anova(Modelq1_Loca)
 r.squaredGLMM(Modelq1_Loca)
-emmeans(Modelq1_Loca, pairwise ~ Location)
+emmeans(Modelq1_Loca, pairwise ~ location)
 ```
 
 ***Phylogenetic***
 ```{r model_phylo, comment="", message=FALSE, warning=FALSE}
-Modelq1p_Loca <- lm(formula = phylogenetic ~ Location, data = alpha_div_meta) 
+Modelq1p_Loca <- lm(formula = phylogenetic ~ location, data = alpha_div_meta) 
 anova(Modelq1p_Loca)
 r.squaredGLMM(Modelq1p_Loca)
-emmeans(Modelq1p_Loca, pairwise ~ Location)
+emmeans(Modelq1p_Loca, pairwise ~ location)
 ```
 
 ***Functional***
 ```{r model_funct, comment="", message=FALSE, warning=FALSE}
-Modelq1F_Loca <- lm(formula = functional ~ Location, data = alpha_div_meta) 
+Modelq1F_Loca <- lm(formula = functional ~ location, data = alpha_div_meta) 
 anova(Modelq1F_Loca)
 r.squaredGLMM(Modelq1F_Loca)
-emmeans(Modelq1F_Loca, pairwise ~ Location)
+emmeans(Modelq1F_Loca, pairwise ~ location)
 ```
 
 ## By behaviour and location
@@ -265,27 +261,27 @@ alpha_div %>%
 
 ***Richness***
 ```{r}
-Model_richness <- glmer.nb(richness ~ Origin+F.M+(1|Location), data = alpha_div_meta)
+Model_richness <- glmer.nb(richness ~ origin+sex+(1|location), data = alpha_div_meta)
 summary(Model_richness)
 ```
 
 ***Neutral***
 ```{r}
-Model_neutral <- lme(fixed = neutral ~ Origin+F.M, data = alpha_div_meta,
-               random = ~ 1 | Location)#log(seq_depth)+
+Model_neutral <- lme(fixed = neutral ~ origin+sex, data = alpha_div_meta,
+               random = ~ 1 | location)#log(seq_depth)+
 summary(Model_neutral)
 ```
 
 ***Phylogenetic***
 ```{r}
-Model_phylo <- lme(fixed = phylogenetic ~ Origin+F.M, data = alpha_div_meta,
-               random = ~ 1 | Location)
+Model_phylo <- lme(fixed = phylogenetic ~ origin+sex, data = alpha_div_meta,
+               random = ~ 1 | location)
 summary(Model_phylo)
 ```
 
 ***Functional***
 ```{r}
-Model_func <- lme(fixed = functional ~ Origin+F.M, data = alpha_div_meta,
-               random = ~ 1 | Location)
+Model_func <- lme(fixed = functional ~ origin+sex, data = alpha_div_meta,
+               random = ~ 1 | location)
 summary(Model_func)
 ```

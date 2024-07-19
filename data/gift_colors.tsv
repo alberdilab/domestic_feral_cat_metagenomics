@@ -1,0 +1,22 @@
+Code_function	Function	Color
+B01	Nucleic acid biosynthesis	#f9c145
+B02	Amino acid biosynthesis	#f79039
+B03	Amino acid derivative biosynthesis	#df5f26
+B04	SCFA biosynthesis	#ee3237
+B06	Organic anion biosynthesis	#d51c58
+B07	Vitamin biosynthesis	#a61f5e
+B08	Aromatic compound biosynthesis	#d53f8c
+B09	Metallophore biosynthesis	#ef4c78
+B10	Antibiotic biosynthesis	#f7946f
+D01	Lipid degradation	#254289
+D02	Polysaccharide degradation	#4a98c7
+D03	Sugar degradation	#53b5db
+D04	Protein degradation	#97d8e9
+D05	Amino acid degradation	#b9dfc6
+D06	Nitrogen compound degradation	#96d2b1
+D07	Alcohol degradation	#50b688
+D08	Xenobiotic degradation	#40936d
+D09	Antibiotic degradation	#2e6c52
+S01	Cellular structure	#b7b7b7
+S02	Appendages	#848484
+S03	Spore	#353535

@@ -1,10 +1,10 @@
 # Beta diversity
 
 ```{r load_data_beta}
-load("data/data_arrange.Rdata")
+load("data/data.Rdata")
 ```
 
-```{r beta_div, comment="", message=FALSE, warning=FALSE}
+```{r beta_div, comment="", message=FALSE, warning=FALSE, eval=FALSE}
 beta_q0n <- genome_counts_filt %>%
   column_to_rownames(., "genome") %>%
   filter(rowSums(. != 0, na.rm = TRUE) > 0) %>%
@@ -30,7 +30,7 @@ beta_q1f <- genome_counts_filt %>%
   hillpair(., q = 1, dist = dist)
 ```
 
-```{r save_beta, comment="", echo= FALSE, message=FALSE, warning=FALSE}
+```{r save_beta, comment="", echo= FALSE, message=FALSE, warning=FALSE, eval=FALSE}
 save(beta_q0n, 
      beta_q1n, 
      beta_q1p, 
@@ -42,22 +42,17 @@ save(beta_q0n,
 load("data/beta.Rdata")
 ```
 
-## Location
+## location
 ### Richness diversity
 
-```{r permanova_color, comment="", message=FALSE, warning=FALSE}
-set.seed(0606)
-locationcolors=c('#c4d7d1','#408892','#2d3749','#c04062','#6b3a59','#e08683')
-```
-
 ```{r permanova_rich, comment="", message=FALSE, warning=FALSE}
-betadisper(beta_q0n$S, sample_metadata$Location) %>% permutest(., pairwise=TRUE) 
-adonis2(beta_q0n$S ~ Location, 
+betadisper(beta_q0n$S, sample_metadata$location) %>% permutest(., pairwise=TRUE) 
+adonis2(beta_q0n$S ~ location, 
         data = sample_metadata %>% arrange(match(sample,labels(beta_q0n$S))), 
         permutations = 999) %>%
         broom::tidy() %>%
         tt()
-pairwise.adonis(beta_q0n$S, sample_metadata$Location, perm = 999)
+pairwise.adonis(beta_q0n$S, sample_metadata$location, perm = 999)
 ```
 ```{r beta_div_nmds_rich_plot, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
 #pdf("figures/beta_q0_loca.pdf",width=9, height=5)
@@ -92,13 +87,13 @@ beta_q0n$S %>%
 
 ### Neutral diversity
 ```{r permanova_neutral, comment="", message=FALSE, warning=FALSE}
-betadisper(beta_q1n$S, sample_metadata$Location) %>% permutest(., pairwise=TRUE) 
-adonis2(beta_q1n$S ~ Location, 
+betadisper(beta_q1n$S, sample_metadata$location) %>% permutest(., pairwise=TRUE) 
+adonis2(beta_q1n$S ~ location, 
         data = sample_metadata %>% arrange(match(sample,labels(beta_q1n$S))), 
         permutations = 999) %>%
         broom::tidy() %>%
         tt()
-pairwise.adonis(beta_q1n$S, sample_metadata$Location, perm = 999)
+pairwise.adonis(beta_q1n$S, sample_metadata$location, perm = 999)
 ```
 
 ```{r beta_div_nmds_neutral_plot, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
@@ -135,13 +130,13 @@ beta_q1n$S %>%
 ### Phylogenetic diversity
 
 ```{r permanova_phylo, comment="", message=FALSE, warning=FALSE}
-betadisper(beta_q1p$S, sample_metadata$Location) %>% permutest(., pairwise=TRUE) 
-adonis2(beta_q1p$S ~ Location, 
+betadisper(beta_q1p$S, sample_metadata$location) %>% permutest(., pairwise=TRUE) 
+adonis2(beta_q1p$S ~ location, 
         data = sample_metadata %>% arrange(match(sample,labels(beta_q1p$S))), 
         permutations = 999) %>%
         broom::tidy() %>%
         tt()
-pairwise.adonis(beta_q1p$S, sample_metadata$Location, perm = 999)
+pairwise.adonis(beta_q1p$S, sample_metadata$location, perm = 999)
 ```
 
 ```{r beta_div_nmds_phylo_plot, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
@@ -177,13 +172,13 @@ beta_q1n$S %>%
 
 ### Functional diversity
 ```{r permanova_func, comment="", message=FALSE, warning=FALSE}
-betadisper(beta_q1f$S, sample_metadata$Location) %>% permutest(., pairwise=TRUE) 
-adonis2(beta_q1f$S ~ Location, 
+betadisper(beta_q1f$S, sample_metadata$location) %>% permutest(., pairwise=TRUE) 
+adonis2(beta_q1f$S ~ location, 
         data = sample_metadata %>% arrange(match(sample,labels(beta_q1f$S))), 
         permutations = 999) %>%
         broom::tidy() %>%
         tt()
-pairwise.adonis(beta_q1f$S, sample_metadata$Location, perm = 999)
+pairwise.adonis(beta_q1f$S, sample_metadata$location, perm = 999)
 
 ```
 
@@ -222,14 +217,14 @@ beta_q1f$S %>%
 
 ### Richness diversity
 ```{r permanova_rich_behaviour, comment="", message=FALSE, warning=FALSE}
-betadisper(beta_q0n$S, sample_metadata$Origin) %>% permutest(., pairwise=TRUE) 
-adonis2(beta_q0n$S ~ Origin, 
+betadisper(beta_q0n$S, sample_metadata$origin) %>% permutest(., pairwise=TRUE) 
+adonis2(beta_q0n$S ~ origin, 
         data = sample_metadata %>% arrange(match(sample,labels(beta_q0n$S))), 
         permutations = 999,
-        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$S))) %>% pull(Location)) %>%
+        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$S))) %>% pull(location)) %>%
         broom::tidy() %>%
         tt()
-pairwise.adonis(beta_q0n$S, sample_metadata$Origin, perm = 999)
+pairwise.adonis(beta_q0n$S, sample_metadata$origin, perm = 999)
 ```
 
 ```{r beta_div_nmds_rich_plot_behaviour, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
@@ -262,14 +257,14 @@ beta_q0n$S %>%
 
 ### Neutral diversity
 ```{r permanova_neutral_behaviour, comment="", message=FALSE, warning=FALSE}
-betadisper(beta_q1n$S, sample_metadata$Origin) %>% permutest(., pairwise=TRUE) 
-adonis2(beta_q1n$S ~ Origin, 
+betadisper(beta_q1n$S, sample_metadata$origin) %>% permutest(., pairwise=TRUE) 
+adonis2(beta_q1n$S ~ origin, 
         data = sample_metadata %>% arrange(match(sample,labels(beta_q1n$S))), 
         permutations = 999,
-        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$S))) %>% pull(Location)) %>%
+        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$S))) %>% pull(location)) %>%
         broom::tidy() %>%
         tt()
-pairwise.adonis(beta_q1n$S, sample_metadata$Origin, perm = 999)
+pairwise.adonis(beta_q1n$S, sample_metadata$origin, perm = 999)
 ```
 
 ```{r beta_div_nmds_neutral_plot_behaviour, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
@@ -304,14 +299,14 @@ dev.off()
 
 ### Phylogenetic diversity
 ```{r permanova_phylo_behaviour, comment="", message=FALSE, warning=FALSE}
-betadisper(beta_q1p$S, sample_metadata$Origin) %>% permutest(., pairwise=TRUE) 
-adonis2(beta_q1p$S ~ Origin, 
+betadisper(beta_q1p$S, sample_metadata$origin) %>% permutest(., pairwise=TRUE) 
+adonis2(beta_q1p$S ~ origin, 
         data = sample_metadata %>% arrange(match(sample,labels(beta_q1p$S))), 
         permutations = 999,
-        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$S))) %>% pull(Location)) %>%
+        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$S))) %>% pull(location)) %>%
         broom::tidy() %>%
         tt()
-pairwise.adonis(beta_q1p$S, sample_metadata$Origin, perm = 999)
+pairwise.adonis(beta_q1p$S, sample_metadata$origin, perm = 999)
 ```
 
 ```{r beta_div_nmds_phylo_plot_behaviour, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
@@ -344,14 +339,14 @@ beta_q1p$S %>%
 
 ### Functional diversity
 ```{r permanova_func_behaviour, comment="", message=FALSE, warning=FALSE}
-betadisper(beta_q1f$S, sample_metadata$Origin) %>% permutest(., pairwise=TRUE) 
-adonis2(beta_q1f$S ~ Origin, 
+betadisper(beta_q1f$S, sample_metadata$origin) %>% permutest(., pairwise=TRUE) 
+adonis2(beta_q1f$S ~ origin, 
         data = sample_metadata %>% arrange(match(sample,labels(beta_q1f$S))), 
         permutations = 999,
-        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$S))) %>% pull(Location)) %>%
+        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$S))) %>% pull(location)) %>%
         broom::tidy() %>%
         tt()
-pairwise.adonis(beta_q1f$S, sample_metadata$Origin, perm = 999)
+pairwise.adonis(beta_q1f$S, sample_metadata$origin, perm = 999)
 
 ```
 
