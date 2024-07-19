@@ -113,12 +113,13 @@ hist()
 var_pred_table <- tibble(mag=m$spNames,
        pred=MFCV$R2,
        var_pred=MFCV$R2 * varpart$vals[1,],
-       support=getPostEstimate(hM=m, parName="Beta")$support %>% .[2,]) %>%
+       support=getPostEstimate(hM=m, parName="Beta")$support %>% .[2,],
+       estimate=getPostEstimate(hM=m, parName="Beta")$mean %>% .[2,]) %>%
   mutate(enrichment=ifelse(support>=support_threshold,"Feral","Neutral")) %>% 
   mutate(enrichment=ifelse(support<=negsupport_threshold,"Domestic",enrichment))
 
 var_pred_table %>% 
-  ggplot(aes(x=support,y=var_pred, color=enrichment))+
+  ggplot(aes(x=estimate,y=var_pred, color=enrichment))+
     geom_point()+
     scale_color_manual(values=c("#bd70ae","#949293","#ebe8e8"))+
     geom_hline(yintercept=0.005, linetype="dashed")+
