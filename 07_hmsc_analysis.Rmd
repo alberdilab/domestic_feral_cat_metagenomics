@@ -4,6 +4,10 @@
 
 ```{r load_data_hmsc_analysis}
 load("data/data.Rdata")
+if(!file.exists("hmsc/fit_model1_250_10.Rdata")){
+  download.file(url='https://sid.erda.dk/share_redirect/A6rm945NbY/fit_model1_250_10.Rdata',
+              destfile='hmsc/fit_model1_250_10.Rdata', method='curl')
+}
 load("hmsc/fit_model1_250_10.Rdata")
 
 # Select desired support threshold
@@ -384,7 +388,7 @@ prediction %>%
             scale_fill_manual(values=phylum_colors)+
           geom_vline(xintercept = 1)+
           coord_trans(x="log")+
-          theme_classic()+
+          theme_minimal()+
   labs(x = "Domestic-to-feral abundance ratio", y = "Genera")
 
 ```
@@ -578,7 +582,6 @@ negative <- function_predictions %>%
   filter(negative_support>=0.9) %>%
   dplyr::select(-positive_support) %>%
   rename(support=negative_support)
-
 
 all_functions <- function_predictions %>%
   left_join(GIFT_db,by=join_by(trait==Code_function)) %>%
