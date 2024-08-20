@@ -21,6 +21,7 @@ genome_metadata <- read_csv("data/genome_metadata.csv") %>%
         phylum == "Firmicutes" ~ "Bacillota",
         phylum == "Firmicutes_A" ~ "Bacillota_A",
         phylum == "Firmicutes_C" ~ "Bacillota_C",
+        phylum == "Cyanobacteria" ~ "Cyanobacteriota",
         phylum == "Proteobacteria" ~ "Pseudomonadota",
         TRUE ~ phylum))
 ```

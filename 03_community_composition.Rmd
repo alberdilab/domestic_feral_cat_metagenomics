@@ -329,3 +329,56 @@ genus_summary %>%
               axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)))+
   labs(y="Family", x="Relative abundance", color="Phylum")
 ```
+
+## Core microbiota
+
+```{r core_mag_upset, warning=FALSE, comments="", message=FALSE, fig.height=8, fig.width=10, fig.fullwidth=TRUE}
+genome_counts_rel <- genome_counts_filt %>%
+  mutate_at(vars(-genome),~./sum(.)) %>%
+  column_to_rownames(., "genome")
+  
+genome_counts_rel_pa=1*(genome_counts_rel>0)
+#MAGrel_pa[1:6,1:6]
+table_upset_analysis_cont=t(aggregate(t(genome_counts_rel_pa),by=list(sample_metadata$location),FUN=sum)[,-1])
+colnames(table_upset_analysis_cont)=levels(as.factor(sample_metadata$location))
+table_upset_analysis=(table_upset_analysis_cont>0)*1
+table_upset_analysis=data.frame(table_upset_analysis)
+table_upset_analysis=apply(table_upset_analysis,2,as.integer)
+rownames(table_upset_analysis) <- rownames(genome_counts_rel_pa)
+
+#pdf("figures/MAG_intersection.pdf",width=8,height=6, onefile=F)
+upset(as.data.frame(table_upset_analysis),
+  keep.order = T,
+  sets = rev(c("Aruba","Brazil","CaboVerde","Spain","Denmark","Malaysia")),
+  sets.bar.color= rev(location_colors),
+  mb.ratio = c(0.55, 0.45), order.by = "freq")
+#dev.off()
+```
+
+```{r core_mag_origin, warning=FALSE, comments="", message=FALSE}
+mag_prevalence_location <- genome_counts_filt  %>%
+  mutate_at(vars(-genome),~./sum(.)) %>%
+  pivot_longer(!genome,names_to="sample",values_to="abundance") %>% 
+  left_join(sample_metadata,by="sample") %>% 
+  mutate(presence=ifelse(abundance>0,1,0)) %>% 
+  select(genome,sample,presence,location,origin) %>%
+  group_by(genome,location,origin) %>%
+  summarise(presence=ifelse(sum(presence)>0,1,0)) %>% 
+  group_by(genome,origin) %>%
+  summarise(presence=sum(presence))
+
+mag_prevalence_location %>% 
+  group_by(origin) %>%
+  summarise(mean=mean(presence),sd=sd(presence)) %>%
+  tt()
+
+wilcox.test(presence ~ origin, data=mag_prevalence_location)  %>%
+  tidy()
+```
+
+```{r core_mag_origin_boxplot, warning=FALSE, comments="", message=FALSE}
+mag_prevalence_location %>% 
+  ggplot(aes(x=origin,y=presence)) +
+    geom_boxplot() +
+    geom_jitter()
+```

@@ -21,13 +21,13 @@ genome-phylogeny
 genome-quality
 functional-overview
 functional-ordination
-mags-shared-across-locations
 community-composition
 taxonomy-overview
 stacked-barplot
 phylum-relative-abundances
 family
 genus
+core-microbiota
 alpha-diversity
 by-location
 plots
@@ -68,3 +68,10 @@ element-level
 positive-associated-functions-at-element-level
 negatively-associated-functions-at-element-level
 function-level
+virulence-factor-analysis
+avi-value
+mean-avi-values
+plots-2
+nvi-value
+mean-nvi-values
+plots-3

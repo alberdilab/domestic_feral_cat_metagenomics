@@ -6,7 +6,7 @@ load("data/data.Rdata")
 
 ## Genome phylogeny
 
-```{r genome_phylogeny, message=FALSE, warning=FALSE, fig.height=10, fig.width=10, fig.fullwidth=TRUE}
+```{r genome_phylogeny, message=FALSE, warning=FALSE}
 # Generate the phylum color heatmap
 phylum_heatmap <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EHI_taxonomy_colour/main/ehi_phylum_colors.tsv") %>%
     mutate(phylum=str_remove_all(phylum, "p__")) %>%
@@ -16,48 +16,158 @@ phylum_heatmap <- read_tsv("https://raw.githubusercontent.com/earthhologenome/EH
     mutate(phylum = factor(phylum, levels = unique(phylum))) %>%
     column_to_rownames(var = "genome")
 
+# Generate prevalence data
+prevalence_data <- genome_counts_filt  %>%
+  pivot_longer(!genome,names_to="sample",values_to="abundance") %>% 
+  left_join(sample_metadata,by="sample") %>% 
+  group_by(genome,location) %>% 
+  summarise(presence=ifelse(sum(abundance)>0,1,0)) %>% 
+  group_by(genome) %>%
+  summarise(prevalence=sum(presence))
+
+# Generate Aruba heatmap
+aruba_heatmap <- genome_counts_filt  %>%
+  pivot_longer(!genome,names_to="sample",values_to="abundance") %>% 
+  left_join(sample_metadata,by="sample") %>% 
+  filter(location=="Aruba") %>% 
+  group_by(genome) %>% 
+  summarise(presence=ifelse(sum(abundance)>0,"present","absent")) %>% 
+  column_to_rownames(var="genome")
+
+# Generate Brazil heatmap
+brazil_heatmap <- genome_counts_filt  %>%
+  pivot_longer(!genome,names_to="sample",values_to="abundance") %>% 
+  left_join(sample_metadata,by="sample") %>% 
+  filter(location=="Brazil") %>% 
+  group_by(genome) %>% 
+  summarise(presence=ifelse(sum(abundance)>0,"present","absent")) %>% 
+  column_to_rownames(var="genome")
+
+# Generate Cabo Verde heatmap
+caboverde_heatmap <- genome_counts_filt  %>%
+  pivot_longer(!genome,names_to="sample",values_to="abundance") %>% 
+  left_join(sample_metadata,by="sample") %>% 
+  filter(location=="CaboVerde") %>% 
+  group_by(genome) %>% 
+  summarise(presence=ifelse(sum(abundance)>0,"present","absent")) %>% 
+  column_to_rownames(var="genome")
+
+# Generate Spain heatmap
+spain_heatmap <- genome_counts_filt  %>%
+  pivot_longer(!genome,names_to="sample",values_to="abundance") %>% 
+  left_join(sample_metadata,by="sample") %>% 
+  filter(location=="Spain") %>% 
+  group_by(genome) %>% 
+  summarise(presence=ifelse(sum(abundance)>0,"present","absent")) %>% 
+  column_to_rownames(var="genome")
+
+# Generate Denmark heatmap
+denmark_heatmap <- genome_counts_filt  %>%
+  pivot_longer(!genome,names_to="sample",values_to="abundance") %>% 
+  left_join(sample_metadata,by="sample") %>% 
+  filter(location=="Denmark") %>% 
+  group_by(genome) %>% 
+  summarise(presence=ifelse(sum(abundance)>0,"present","absent")) %>% 
+  column_to_rownames(var="genome")
+
+# Generate Malaysia heatmap
+malaysia_heatmap <- genome_counts_filt  %>%
+  pivot_longer(!genome,names_to="sample",values_to="abundance") %>% 
+  left_join(sample_metadata,by="sample") %>% 
+  filter(location=="Malaysia") %>% 
+  group_by(genome) %>% 
+  summarise(presence=ifelse(sum(abundance)>0,"present","absent")) %>% 
+  column_to_rownames(var="genome")
+
+# Generate domestic heatmap
+domestic_heatmap <- genome_counts_filt  %>%
+  pivot_longer(!genome,names_to="sample",values_to="abundance") %>% 
+  left_join(sample_metadata,by="sample") %>% 
+  filter(origin=="Domestic") %>% 
+  group_by(genome) %>% 
+  summarise(presence=ifelse(sum(abundance)>0,"present","absent")) %>% 
+  column_to_rownames(var="genome")
+
+# Generate feral heatmap
+feral_heatmap <- genome_counts_filt  %>%
+  pivot_longer(!genome,names_to="sample",values_to="abundance") %>% 
+  left_join(sample_metadata,by="sample") %>% 
+  filter(origin=="Feral") %>% 
+  group_by(genome) %>% 
+  summarise(presence=ifelse(sum(abundance)>0,"present","absent")) %>% 
+  column_to_rownames(var="genome")
+```
+
+```{r genome_phylogeny_plot, message=FALSE, warning=FALSE, fig.height=10, fig.width=10, fig.fullwidth=TRUE}
 # Generate  basal tree
 circular_tree <- force.ultrametric(genome_tree, method="extend") %>% # extend to ultrametric for the sake of visualisation
-    ggtree(., layout="fan", open.angle=10, size=0.5)
+    ggtree(., layout="fan", open.angle=10, size=0.2)
 
 # Add phylum ring
-circular_tree <- gheatmap(circular_tree, phylum_heatmap, offset=0.55, width=0.1, colnames=FALSE) +
+circular_tree <- gheatmap(circular_tree, phylum_heatmap, offset=0, width=0.05, colnames=FALSE) +
         scale_fill_manual(values=phylum_colors) +
-        geom_tiplab2(size=1, hjust=-0.1) +
-        theme(legend.position = "none", plot.margin = margin(0, 0, 0, 0), panel.margin = margin(0, 0, 0, 0))
+        theme(legend.position = "none", plot.margin = margin(0, 0, 0, 0), panel.margin = margin(0, 0, 0, 0)) +
+        new_scale_fill()
 
-# Flush color scale to enable a new color scheme in the next ring
-circular_tree <- circular_tree + new_scale_fill()
+# Add Aruba ring
+circular_tree <- gheatmap(circular_tree, aruba_heatmap, offset=0.2, width=0.05, colnames=FALSE) +
+        scale_fill_manual(values=c("#ffffff","#3D5C61")) +
+        theme(legend.position = "none", plot.margin = margin(0, 0, 0, 0), panel.margin = margin(0, 0, 0, 0)) +
+        new_scale_fill()
 
-# Add completeness ring
-circular_tree <- circular_tree +
-        new_scale_fill() +
-        scale_fill_gradient(low = "#d1f4ba", high = "#f4baba") +
-        geom_fruit(
-                data=genome_metadata,
-                geom=geom_bar,
-                mapping = aes(x=completeness, y=genome, fill=contamination),
-                offset = 0.55,
-                orientation="y",
-              stat="identity")
+# Add Brazil ring
+circular_tree <- gheatmap(circular_tree, brazil_heatmap, offset=0.3, width=0.05, colnames=FALSE) +
+        scale_fill_manual(values=c("#ffffff","#41B6C0")) +
+        theme(legend.position = "none", plot.margin = margin(0, 0, 0, 0), panel.margin = margin(0, 0, 0, 0)) +
+        new_scale_fill()
 
-# Add genome-size ring
+# Add Cabo Verde ring
+circular_tree <- gheatmap(circular_tree, caboverde_heatmap, offset=0.4, width=0.05, colnames=FALSE) +
+        scale_fill_manual(values=c("#ffffff","#90C8C5")) +
+        theme(legend.position = "none", plot.margin = margin(0, 0, 0, 0), panel.margin = margin(0, 0, 0, 0)) +
+        new_scale_fill()
+
+# Add Spain ring
+circular_tree <- gheatmap(circular_tree, spain_heatmap, offset=0.5, width=0.05, colnames=FALSE) +
+        scale_fill_manual(values=c("#ffffff","#E5D388")) +
+        theme(legend.position = "none", plot.margin = margin(0, 0, 0, 0), panel.margin = margin(0, 0, 0, 0)) +
+        new_scale_fill()
+
+# Add Denmark ring
+circular_tree <- gheatmap(circular_tree, denmark_heatmap, offset=0.6, width=0.05, colnames=FALSE) +
+        scale_fill_manual(values=c("#ffffff","#BFA366")) +
+        theme(legend.position = "none", plot.margin = margin(0, 0, 0, 0), panel.margin = margin(0, 0, 0, 0)) +
+        new_scale_fill()
+
+# Add Malaysia ring
+circular_tree <- gheatmap(circular_tree, malaysia_heatmap, offset=0.7, width=0.05, colnames=FALSE) +
+        scale_fill_manual(values=c("#ffffff","#6E5244")) +
+        theme(legend.position = "none", plot.margin = margin(0, 0, 0, 0), panel.margin = margin(0, 0, 0, 0)) +
+        new_scale_fill()
+
+# Add prevalence ring
 circular_tree <-  circular_tree +
         new_scale_fill() +
         scale_fill_manual(values = "#cccccc") +
         geom_fruit(
-             data=genome_metadata,
+             data=prevalence_data,
              geom=geom_bar,
-             mapping = aes(x=length, y=genome),
-                 offset = 0.05,
+             mapping = aes(x=prevalence, y=genome),
+                 offset = 0.4,
                  orientation="y",
          stat="identity")
 
-# Add text
-circular_tree <-  circular_tree +
-        annotate('text', x=2.7, y=0, label='            Phylum', family='arial', size=3.5) +
-        annotate('text', x=3.1, y=0, label='                         Genome quality', family='arial', size=3.5) +
-        annotate('text', x=3.5, y=0, label='                     Genome size', family='arial', size=3.5)
+# Add Domestic ring
+circular_tree <- gheatmap(circular_tree, domestic_heatmap, offset=1.4, width=0.05, colnames=FALSE) +
+        scale_fill_manual(values=c("#ffffff","#bd70ae")) +
+        theme(legend.position = "none", plot.margin = margin(0, 0, 0, 0), panel.margin = margin(0, 0, 0, 0)) +
+        new_scale_fill()
+
+# Add Feral ring
+circular_tree <- gheatmap(circular_tree, feral_heatmap, offset=1.5, width=0.05, colnames=FALSE) +
+        scale_fill_manual(values=c("#ffffff","#949293")) +
+        theme(legend.position = "none", plot.margin = margin(0, 0, 0, 0), panel.margin = margin(0, 0, 0, 0)) +
+        new_scale_fill()
 
 #Plot circular tree
 circular_tree %>% open_tree(30) %>% rotate_tree(90)
@@ -208,30 +318,4 @@ function_ordination <- tSNE_function$Y %>%
                 guides(color = guide_legend(override.aes = list(size = 5))) # enlarge Phylum dots in legend
 
 function_ordination
-```
-
-## MAGs shared across locations
-
-```{r chart1, comment="", echo=FALSE, message=FALSE, warning=FALSE}
-
-genome_counts_rel <- genome_counts_filt %>%
-  mutate_at(vars(-genome),~./sum(.)) %>%
-  column_to_rownames(., "genome")
-  
-genome_counts_rel_pa=1*(genome_counts_rel>0)
-#MAGrel_pa[1:6,1:6]
-table_upset_analysis_cont=t(aggregate(t(genome_counts_rel_pa),by=list(sample_metadata$location),FUN=sum)[,-1])
-colnames(table_upset_analysis_cont)=levels(as.factor(sample_metadata$location))
-table_upset_analysis=(table_upset_analysis_cont>0)*1
-table_upset_analysis=data.frame(table_upset_analysis)
-table_upset_analysis=apply(table_upset_analysis,2,as.integer)
-rownames(table_upset_analysis) <- rownames(genome_counts_rel_pa)
-
-#pdf("figures/MAG_intersection.pdf",width=8,height=6, onefile=F)
-upset(as.data.frame(table_upset_analysis),
-  keep.order = T,
-  sets = rev(c("Aruba","Brazil","CaboVerde","Spain","Denmark","Malaysia")),
-  sets.bar.color= rev(location_colors),
-  mb.ratio = c(0.55, 0.45), order.by = "freq")
-#dev.off()
 ```
