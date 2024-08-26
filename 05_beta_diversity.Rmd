@@ -141,7 +141,7 @@ pairwise.adonis(beta_q1p$S, sample_metadata$location, perm = 999)
 
 ```{r beta_div_nmds_phylo_plot, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
 #pdf("figures/beta_q1p_loca.pdf",width=9, height=5)
-beta_q1n$S %>%
+beta_q1p$S %>%
   vegan::metaMDS(., trymax = 500, k = 2, trace=0) %>%
   vegan::scores() %>%
   as_tibble(., rownames = "sample") %>%

@@ -378,7 +378,10 @@ wilcox.test(presence ~ origin, data=mag_prevalence_location)  %>%
 
 ```{r core_mag_origin_boxplot, warning=FALSE, comments="", message=FALSE}
 mag_prevalence_location %>% 
-  ggplot(aes(x=origin,y=presence)) +
+  ggplot(aes(x=origin,y=presence, color=origin, fill=origin)) +
     geom_boxplot() +
-    geom_jitter()
+    geom_jitter() +
+    scale_color_manual(values=origin_colors) +
+    scale_fill_manual(values=str_c(origin_colors,"50")) +
+    theme_minimal()
 ```

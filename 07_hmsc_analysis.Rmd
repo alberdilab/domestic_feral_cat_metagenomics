@@ -110,7 +110,7 @@ left_join(genome_fit, by="genome") %>%
 filter(r2>0.5) %>% 
 select(-c(genome,r2)) %>% 
 colSums() %>%  
-hist()
+hist(main="Predictive capacity")
 ```
 
 ```{r predictive_mags, warning=FALSE, comments="", message=FALSE}
@@ -203,31 +203,6 @@ postestimates_tree <- gheatmap(postestimates_tree, post_beta, offset=0, width=0.
         scale_fill_manual(values=c("#be3e2b","#f4f4f4","#b2b530"))+
         labs(fill="Trend")
 
-#Reset fill scale to use a different colour profile in the heatmap
-postestimates_tree <- postestimates_tree + new_scale_fill()
-
-postestimates_tree <- postestimates_tree +
-        geom_fruit(
-             data=genome_depth,
-             geom=geom_bar,
-             mapping = aes(x=depth, y=genome, fill=depth),
-             offset = 0.58,
-             orientation="y",
-             stat="identity")
-      # Define x-axis limits here
-
-#Reset fill scale to use a different colour profile in the heatmap
-postestimates_tree <- postestimates_tree + new_scale_fill()
-
-postestimates_tree <- postestimates_tree +
-        geom_fruit(
-             data=genome_fit,
-             geom=geom_bar,
-             mapping = aes(x=r2, y=genome, fill=r2),
-             offset = 0.1,
-             orientation="y",
-             stat="identity")
-      # Define x-axis limits here
 
 postestimates_tree +
         vexpand(.25, 1) # expand top 

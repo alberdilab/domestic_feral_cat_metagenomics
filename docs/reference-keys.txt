@@ -68,10 +68,3 @@ element-level
 positive-associated-functions-at-element-level
 negatively-associated-functions-at-element-level
 function-level
-virulence-factor-analysis
-avi-value
-mean-avi-values
-plots-2
-nvi-value
-mean-nvi-values
-plots-3
