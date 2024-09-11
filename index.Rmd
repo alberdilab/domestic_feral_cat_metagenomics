@@ -2,8 +2,7 @@
 title: "AlberdiLab | "
 subtitle: "Domestic-feral cat metagenomics"
 author:
-  - Ostaizka Aizpurua^[University of Copenhagen, ostaizka.aizpurua@sund.ku.dk]
-  - Antton Alberdi^[University of Copenhagen, antton.alberdi@sund.ku.dk]
+  - Ostaizka Aizpurua , Amanda Bolt Botnen , Mr. Raphael A. Eisenhofer , Iñaki Odriozola , Luisa Santos-Bay , Mads Bjorn Bjornsen , Dr. Thomas Gilbert, Antton Alberdi^[University of Copenhagen, antton.alberdi@sund.ku.dk]
 date: "`r Sys.Date()`"
 site: bookdown::bookdown_site
 documentclass: book
