@@ -3,7 +3,8 @@
 Ostaizka Aizpurua, Amanda Bolt Botnen, Raphael Eisenhofer, Inaki Odriozola, Luisa Santos-Bay, Mads Bjorn Bjornsen, M Thomas P Gilbert, Antton Alberdi
 
 - **DOI:** https://doi.org/10.1101/2024.09.04.611329
-- **Correspondence:** antton.alberdi@sund.ku.dk, tgilbert@sund.ku.dk 
+- **Correspondence:** antton.alberdi@sund.ku.dk, tgilbert@sund.ku.dk
+- **Raw data accession:** PRJEB79769
 
 The raw code used for data analysis is in the **Rmd** files stored in the root directory of this repository, while the bookdown-rendered webbook is available at:
 
