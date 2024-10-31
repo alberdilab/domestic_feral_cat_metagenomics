@@ -1,6 +1,6 @@
 # MAG catalogue
 
-```{r load_data_mag, message=FALSE, warning=FALSE}
+```{r load_data_mag, message=FALSE, warning=FALSE, echo=FALSE}
 load("data/data.Rdata")
 ```
 

@@ -1,6 +1,6 @@
 # Community composition
 
-```{r load_data_community}
+```{r load_data_community, echo=FALSE}
 load("data/data.Rdata")
 ```
 

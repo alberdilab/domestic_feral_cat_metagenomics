@@ -1,3 +1,4 @@
+# (PART) Microbiome analysis {-}
 # Data preparation
 
 ## Load data
@@ -126,7 +127,5 @@ save(sample_metadata,
      phylum_colors,
      location_colors,
      origin_colors,
-#     physeq_genome,
-#     physeq_genome_clr,
      file = "data/data.Rdata")
 ```

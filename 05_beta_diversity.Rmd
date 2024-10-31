@@ -1,8 +1,10 @@
 # Beta diversity
 
-```{r load_data_beta}
+```{r load_data_beta, echo=FALSE}
 load("data/data.Rdata")
 ```
+
+## Hill numbers
 
 ```{r beta_div, comment="", message=FALSE, warning=FALSE, eval=FALSE}
 beta_q0n <- genome_counts_filt %>%
@@ -42,8 +44,9 @@ save(beta_q0n,
 load("data/beta.Rdata")
 ```
 
-## location
-### Richness diversity
+## By location
+
+### Richness
 
 ```{r permanova_rich, comment="", message=FALSE, warning=FALSE}
 betadisper(beta_q0n$S, sample_metadata$location) %>% permutest(., pairwise=TRUE) 
@@ -85,7 +88,8 @@ beta_q0n$S %>%
 #dev.off()
 ```
 
-### Neutral diversity
+### Neutral
+
 ```{r permanova_neutral, comment="", message=FALSE, warning=FALSE}
 betadisper(beta_q1n$S, sample_metadata$location) %>% permutest(., pairwise=TRUE) 
 adonis2(beta_q1n$S ~ location, 
@@ -127,7 +131,7 @@ beta_q1n$S %>%
 #dev.off()
 ```
 
-### Phylogenetic diversity
+### Phylogenetic
 
 ```{r permanova_phylo, comment="", message=FALSE, warning=FALSE}
 betadisper(beta_q1p$S, sample_metadata$location) %>% permutest(., pairwise=TRUE) 
@@ -170,7 +174,8 @@ beta_q1p$S %>%
 #dev.off()
 ```
 
-### Functional diversity
+### Functional
+
 ```{r permanova_func, comment="", message=FALSE, warning=FALSE}
 betadisper(beta_q1f$S, sample_metadata$location) %>% permutest(., pairwise=TRUE) 
 adonis2(beta_q1f$S ~ location, 
@@ -213,9 +218,10 @@ beta_q1f$S %>%
 #dev.off()
 ```
 
-## Behaviour
+## By behaviour
 
-### Richness diversity
+### Richness
+
 ```{r permanova_rich_behaviour, comment="", message=FALSE, warning=FALSE}
 betadisper(beta_q0n$S, sample_metadata$origin) %>% permutest(., pairwise=TRUE) 
 adonis2(beta_q0n$S ~ origin, 
@@ -255,7 +261,8 @@ beta_q0n$S %>%
     ) 
 ```
 
-### Neutral diversity
+### Neutral 
+
 ```{r permanova_neutral_behaviour, comment="", message=FALSE, warning=FALSE}
 betadisper(beta_q1n$S, sample_metadata$origin) %>% permutest(., pairwise=TRUE) 
 adonis2(beta_q1n$S ~ origin, 
@@ -297,7 +304,8 @@ beta_q1n$S %>%
 dev.off()
 ```
 
-### Phylogenetic diversity
+### Phylogenetic 
+
 ```{r permanova_phylo_behaviour, comment="", message=FALSE, warning=FALSE}
 betadisper(beta_q1p$S, sample_metadata$origin) %>% permutest(., pairwise=TRUE) 
 adonis2(beta_q1p$S ~ origin, 
@@ -337,7 +345,8 @@ beta_q1p$S %>%
     ) 
 ```
 
-### Functional diversity
+### Functional 
+
 ```{r permanova_func_behaviour, comment="", message=FALSE, warning=FALSE}
 betadisper(beta_q1f$S, sample_metadata$origin) %>% permutest(., pairwise=TRUE) 
 adonis2(beta_q1f$S ~ origin, 

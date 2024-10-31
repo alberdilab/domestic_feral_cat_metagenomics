@@ -1,93 +1,93 @@
-sample,location,origin,sex,bites,hisses,retreats,vocalization,acceptance,sedating,healthy,dry_skin,stiff,agile,clear_eyes,sick_injured,coat_condition,age,comment
-Aruba_501,Aruba,Domestic,Male,NO,NO,NO,YES,NA,NO,YES,NO,NO,NO,YES,NO,Healthy,Unknown,59
-Aruba_502,Aruba,Domestic,Male,NO,NO,NO,YES,NA,NO,YES,NO,NO,NO,NO,NO,Unknown,1.5 years,
-Aruba_503,Aruba,Domestic,Female,NO,NO,YES,YES,YES,NO,YES,NO,NO,NO,YES,NO,Unknown,1 year,wounded
-Aruba_504,Aruba,Feral,Female,NO,NO,YES,YES,NA,NO,NO,NO,NO,NO,NO,NO,Matted,Unknown,Fleas
-Aruba_505,Aruba,Domestic,Male,NO,NO,NO,NA,YES,NO,YES,NO,NO,NO,YES,NO,Healthy,Unknown,
-Aruba_506,Aruba,Domestic,Female,NO,NO,NO,YES,YES,NO,YES,NO,NO,NO,YES,NO,Healthy,6 months,
-Aruba_507,Aruba,Feral,Female,NO,NO,YES,YES,YES,NO,YES,NO,NO,NO,YES,NO,Unknown,Unknown,
-Aruba_508,Aruba,Domestic,Female,NO,NO,YES,NA,YES,NO,YES,NO,NO,NO,YES,NO,Unknown,Unknown,
-Aruba_509,Aruba,Feral,Female,NO,NO,NO,YES,YES,NO,YES,NO,NO,NO,YES,NO,Healthy,1 year,
-Aruba_510,Aruba,Feral,Male,NO,NO,YES,NA,NA,NO,YES,NO,NO,NO,NO,NO,Unknown,1 year,
-Aruba_511,Aruba,Feral,Male,NO,NO,YES,NA,YES,NO,YES,NO,NO,NO,YES,NO,Unknown,Unknown,
-Aruba_512,Aruba,Feral,Male,NO,YES,NO,NA,NA,NO,YES,NO,NO,NO,NO,NO,Healthy,Unknown,
-Aruba_513,Aruba,Feral,Female,NO,NO,YES,NA,NA,NO,YES,NO,NO,NO,YES,NO,Unknown,Unknown,Pregnant/nursing
-Aruba_514,Aruba,Domestic,Male,NO,NO,NO,YES,YES,NO,YES,NO,NO,NO,YES,NO,Healthy,Unknown,
-Aruba_515,Aruba,Domestic,Female,NO,NO,NO,NO,YES,NO,YES,NO,NO,NO,YES,NO,Healthy,Unknown,
-Aruba_516,Aruba,Domestic,Male,NO,NO,NO,NA,YES,NO,YES,NO,NO,NO,NO,NO,Healthy,Unknown,
-Brazil_501,Brazil,Feral,Female,YES,NO,YES,NA,NO,YES,YES,NO,NO,NO,YES,NO,Unknown,Unknown,
-Brazil_502,Brazil,Feral,Female,YES,NO,NO,NO,NO,YES,NO,NO,NO,NO,NO,YES,Bad,Unknown,
-Brazil_503,Brazil,Feral,Male,YES,YES,NO,NA,NA,NO,NO,NO,NO,YES,YES,NO,Unknown,Unknown,
-Brazil_504,Brazil,Feral,Female,NO,NO,YES,NA,NA,NO,NO,NO,YES,NO,NO,NO,Unknown,Unknown,
-Brazil_505,Brazil,Feral,Male,YES,NO,NO,NA,YES,NO,NO,NO,NO,YES,NO,NO,Healthy,Adult,
-Brazil_506,Brazil,Feral,Male,YES,YES,NO,NA,NA,NO,NO,NO,NO,NO,NO,YES,Bad,Unknown,
-Brazil_507,Brazil,Feral,Female,NO,NO,YES,NA,NA,NO,NO,NO,NO,NO,YES,NO,Unknown,Adult,
-Brazil_508,Brazil,Feral,Male,YES,NO,NO,NA,NA,NO,NO,NO,NO,YES,NO,NO,Unknown,Adult,
-Brazil_509,Brazil,Domestic,Female,NO,NO,NO,NA,NA,NO,YES,NO,NO,YES,YES,NO,Healthy,Unknown,
-Brazil_510,Brazil,Domestic,Female,YES,NO,NO,NA,NA,NO,YES,NO,NO,YES,YES,NO,Healthy,5 years,
-Brazil_511,Brazil,Domestic,Male,NO,NO,YES,NA,NA,NO,YES,NO,NO,NO,YES,NO,Unknown,1 year,seguila neurologica
-Brazil_512,Brazil,Domestic,Male,NO,NO,YES,NA,NA,NO,YES,NO,NO,YES,YES,NO,Healthy,3 years,paraplogico bipede
-Brazil_513,Brazil,Domestic,Male,NO,NO,NO,NA,NA,NO,YES,NO,NO,NO,YES,NO,Healthy,7 years,FeLV+
-Brazil_514,Brazil,Domestic,Male,NO,NO,NO,NA,NA,NO,YES,NO,NO,NO,YES,NO,Healthy,8 years,seguila neurologica
-Brazil_515,Brazil,Domestic,Female,NO,NO,NO,YES,YES,NO,YES,NO,NO,YES,YES,NO,Healthy,6 years,
-Brazil_516,Brazil,Domestic,Female,NO,NO,NO,NA,YES,NO,YES,NO,NO,NO,YES,NO,Healthy,6 years,
-CaboVerde_501,CaboVerde,Domestic,Male,NO,NO,NO,YES,YES,NO,YES,NO,NO,YES,YES,NO,Healthy,2 years,
-CaboVerde_502,CaboVerde,Domestic,Female,NO,NO,NO,YES,YES,NO,YES,NO,NO,NO,YES,NO,Healthy,1 year,
-CaboVerde_503,CaboVerde,Domestic,Male,NO,NO,NO,YES,YES,NO,YES,NO,NO,YES,YES,NO,Healthy,5 months,
-CaboVerde_504,CaboVerde,Domestic,Female,NO,NO,NO,YES,YES,NO,YES,NO,NO,NO,YES,NO,Healthy,1 year,
-CaboVerde_505,CaboVerde,Domestic,Female,NO,NO,NO,NO,YES,NO,YES,NO,NO,YES,YES,NO,Healthy,2 years,
-CaboVerde_506,CaboVerde,Domestic,Male,NO,YES,YES,NO,NA,NO,YES,NO,NO,YES,YES,NO,Healthy,5 years,Pregnant/nursing..... but male?
-CaboVerde_507,CaboVerde,Domestic,Male,NO,YES,NO,NA,YES,NO,YES,NO,NO,NO,YES,NO,Healthy,3 years,
-CaboVerde_508,CaboVerde,Domestic,Male,NO,NO,NO,YES,YES,NO,YES,NO,NO,YES,YES,NO,Healthy,2 years,
-CaboVerde_509,CaboVerde,Domestic,Male,NO,NO,NO,NO,YES,NO,YES,NO,NO,YES,YES,NO,Healthy,9 months,
-CaboVerde_510,CaboVerde,Domestic,Female,NO,NO,NO,YES,YES,NO,YES,NO,NO,YES,YES,NO,Healthy,10 months,
-CaboVerde_511,CaboVerde,Domestic,Male,NO,NO,YES,NO,YES,NO,YES,NO,NO,YES,YES,NO,Healthy,9 months,
-CaboVerde_512,CaboVerde,Domestic,Female,NO,NO,NO,NO,YES,NO,YES,NO,NO,YES,YES,NO,Healthy,8 years,
-CaboVerde_513,CaboVerde,Feral,Female,NO,NO,NO,YES,YES,NO,YES,NO,NO,NO,YES,NO,Healthy,1 year,Pregnant/Nursing
-CaboVerde_514,CaboVerde,Feral,Female,NO,NO,NO,YES,YES,NO,NO,YES,NO,NO,NO,NO,Matted,3 years,
-CaboVerde_515,CaboVerde,Feral,Male,NO,NO,NO,YES,YES,NO,YES,NO,NO,NO,YES,NO,Unknown,4 years,
-Denmark_10,Denmark,Feral,Unknown,NO,YES,NO,YES,NA,YES,NO,NO,NO,NO,NO,NO,Unknown,Unknown,
-Denmark_11,Denmark,Feral,Unknown,NO,YES,YES,YES,NO,YES,NO,NO,NO,NO,NO,NO,Unknown,Unknown,
-Denmark_12,Denmark,Domestic,Unknown,NO,YES,NO,NA,NO,YES,NO,NO,NO,NO,NO,NO,Unknown,Unknown,
-Denmark_13,Denmark,Domestic,Female,NO,NO,NO,NA,YES,NO,NO,NO,NO,NO,NO,NO,Unknown,Unknown,
-Denmark_14,Denmark,Domestic,Unknown,NO,NO,NO,YES,YES,NO,NO,NO,NO,NO,NO,NO,Bad,Unknown,
-Denmark_15,Denmark,Feral,Unknown,NO,NO,YES,NA,NA,NO,NO,NO,NO,NO,NO,NO,Unknown,Unknown,
-Denmark_1,Denmark,Domestic,Unknown,NO,NO,NO,NA,NA,NO,NO,NO,NO,NO,NO,NO,Unknown,Unknown,Pregnant
-Denmark_2,Denmark,Feral,Unknown,NO,YES,NO,NO,NA,NO,NO,NO,NO,NO,NO,NO,Unknown,Unknown,
-Denmark_3,Denmark,Feral,Unknown,NO,NO,YES,YES,NA,NO,NO,NO,NO,NO,NO,NO,Bad,Unknown,
-Denmark_4,Denmark,Feral,Unknown,NO,NO,NO,YES,NA,NO,NO,NO,NO,NO,NO,NO,Unknown,Unknown,
-Denmark_5,Denmark,Domestic,Unknown,NO,NO,NO,NA,NA,NO,NO,NO,NO,NO,NO,NO,Unknown,Unknown,
-Denmark_6,Denmark,Feral,Unknown,NO,NO,NO,NO,YES,NO,NO,NO,NO,NO,NO,NO,Unknown,Unknown,
-Denmark_7,Denmark,Feral,Unknown,YES,YES,NO,NO,NA,NO,NO,NO,NO,NO,NO,NO,Unknown,Unknown,
-Denmark_8,Denmark,Feral,Unknown,YES,NO,NO,YES,YES,NO,NO,NO,NO,NO,YES,NO,Unknown,Unknown,
-Denmark_9,Denmark,Domestic,Unknown,NO,NO,NO,NA,NA,NO,NO,NO,YES,NO,NO,NO,Unknown,Unknown,
-Malaysia_501,Malaysia,Domestic,Male,NO,NO,NO,YES,YES,NO,NO,NO,NO,NO,YES,NO,Healthy,1 year,Overweight
-Malaysia_502,Malaysia,Domestic,Female,NO,NO,NO,NA,NA,NO,YES,NO,NO,NO,YES,NO,Healthy,1 year,
-Malaysia_503,Malaysia,Domestic,Male,NO,NO,NO,YES,YES,NO,YES,NO,NO,NO,YES,NO,Healthy,1 year,
-Malaysia_504,Malaysia,Domestic,Male,NO,NO,NO,YES,YES,NO,YES,NO,NO,NO,YES,NO,Healthy,6 months,
-Malaysia_505,Malaysia,Feral,Male,NO,YES,YES,NA,YES,NO,NO,YES,NO,YES,YES,NO,Unknown,2 years,
-Malaysia_506,Malaysia,Domestic,Male,NO,NO,NO,NA,YES,NO,YES,NO,NO,NO,YES,NO,Healthy,1.5 year,
-Malaysia_507,Malaysia,Domestic,Female,NO,NO,NO,YES,YES,NO,YES,NO,NO,YES,YES,NO,Healthy,1 year,
-Malaysia_508,Malaysia,Domestic,Female,NO,NO,NO,YES,YES,NO,YES,NO,NO,NO,YES,NO,Healthy,6 months,
-Malaysia_509,Malaysia,Domestic,Female,NO,NO,NO,YES,YES,NO,YES,NO,NO,NO,YES,NO,Healthy,1 year,
-Malaysia_510,Malaysia,Feral,Male,NO,YES,NO,YES,NO,YES,YES,NO,NO,NO,YES,NO,Healthy,6 months,
-Malaysia_511,Malaysia,Feral,Female,NO,YES,NO,YES,NO,YES,YES,NO,NO,NO,YES,NO,Healthy,1 year,Pregnant/nursing
-Malaysia_512,Malaysia,Feral,Female,NO,YES,NO,NO,NO,YES,YES,NO,NO,NO,YES,NO,Healthy,8 months,
-Malaysia_513,Malaysia,Feral,Male,YES,NO,NO,YES,NO,YES,YES,NO,NO,YES,YES,NO,Healthy,4 months,
-Malaysia_514,Malaysia,Feral,Female,YES,YES,YES,NO,NO,YES,YES,NO,NO,NO,YES,NO,Healthy,1 year,
-Malaysia_515,Malaysia,Feral,Female,NO,YES,YES,YES,NO,YES,YES,NO,NO,NO,YES,NO,Healthy,1 year,
-Spain_501,Spain,Domestic,Male,NO,NO,NO,NO,YES,NO,YES,NO,NO,YES,YES,NO,Healthy,1 year,scared
-Spain_502,Spain,Domestic,Female,NO,NO,NO,NO,YES,NO,YES,NO,YES,NO,YES,NO,Healthy,1 year,scared
-Spain_503,Spain,Feral,Female,YES,NO,NO,YES,NO,YES,YES,NO,NO,YES,YES,NO,Healthy,1.5 years,Lactating + scared
-Spain_504,Spain,Feral,Female,NO,NO,NO,YES,NO,YES,YES,NO,NO,YES,YES,NO,Healthy,1.5 years,Lactating + scared + mites in both ears
-Spain_505,Spain,Domestic,Female,NO,NO,NO,NO,YES,NO,YES,NO,NO,YES,YES,NO,Healthy,7 years,Lactating
-Spain_506,Spain,Domestic,Female,NO,NO,NO,YES,YES,NO,YES,NO,NO,YES,YES,NO,Healthy,9 months,scared
-Spain_507,Spain,Feral,Male,NO,YES,NO,NO,NO,YES,YES,NO,NO,YES,YES,NO,Healthy,2 years,
-Spain_508,Spain,Domestic,Female,NO,YES,NO,NA,YES,NO,YES,NO,NO,YES,YES,NO,Healthy,6 months,Hisses in clinic but is sociable at home
-Spain_509,Spain,Feral,Female,NO,NO,NO,NA,NO,YES,YES,NO,NO,YES,YES,NO,Healthy,8 years,scared
-Spain_510,Spain,Domestic,Female,NO,NO,NO,YES,YES,NO,YES,NO,NO,YES,YES,NO,Healthy,1 year,scared
-Spain_511,Spain,Feral,Female,YES,YES,NO,NO,NO,YES,YES,NO,NO,YES,YES,YES,Healthy,1 year,scared + wound on nose from trying to escape cage
-Spain_512,Spain,Feral,Female,NO,NO,NO,YES,NO,YES,NO,YES,NO,YES,YES,YES,Unknown,4 years,scared + lactating + ear mites and ear dermatitis
-Spain_514,Spain,Domestic,Male,NO,NO,NO,YES,YES,NO,YES,NO,NO,YES,YES,NO,Healthy,1 year,
-Spain_515,Spain,Feral,Male,NO,YES,NO,YES,NO,YES,YES,NO,NO,YES,YES,NO,Healthy,1 year,Ear issues
-Spain_516,Spain,Domestic,Female,NO,NO,NO,YES,YES,NO,YES,NO,NO,YES,YES,NO,Healthy,13 months,scared
+sample,location,origin,sex,bites,hisses,retreats,avoidance,coat_condition,age,comment
+Aruba_501,Aruba,Domestic,Male,0,0,0,NA,Healthy,Unknown,59
+Aruba_502,Aruba,Domestic,Male,0,0,0,NA,Unknown,1.5 years,
+Aruba_503,Aruba,Domestic,Female,0,0,1,0,Unknown,1 year,wounded
+Aruba_504,Aruba,Feral,Female,0,0,1,NA,Matted,Unknown,Fleas
+Aruba_505,Aruba,Domestic,Male,0,0,0,0,Healthy,Unknown,
+Aruba_506,Aruba,Domestic,Female,0,0,0,0,Healthy,6 months,
+Aruba_507,Aruba,Feral,Female,0,0,1,0,Unknown,Unknown,
+Aruba_508,Aruba,Domestic,Female,0,0,1,0,Unknown,Unknown,
+Aruba_509,Aruba,Feral,Female,0,0,0,0,Healthy,1 year,
+Aruba_510,Aruba,Feral,Male,0,0,1,NA,Unknown,1 year,
+Aruba_511,Aruba,Feral,Male,0,0,1,0,Unknown,Unknown,
+Aruba_512,Aruba,Feral,Male,0,1,0,NA,Healthy,Unknown,
+Aruba_513,Aruba,Feral,Female,0,0,1,NA,Unknown,Unknown,Pregnant/nursing
+Aruba_514,Aruba,Domestic,Male,0,0,0,0,Healthy,Unknown,
+Aruba_515,Aruba,Domestic,Female,0,0,0,0,Healthy,Unknown,
+Aruba_516,Aruba,Domestic,Male,0,0,0,0,Healthy,Unknown,
+Brazil_501,Brazil,Feral,Female,1,0,1,1,Unknown,Unknown,
+Brazil_502,Brazil,Feral,Female,1,0,0,1,Bad,Unknown,
+Brazil_503,Brazil,Feral,Male,1,1,0,NA,Unknown,Unknown,
+Brazil_504,Brazil,Feral,Female,0,0,1,NA,Unknown,Unknown,
+Brazil_505,Brazil,Feral,Male,1,0,0,0,Healthy,Adult,
+Brazil_506,Brazil,Feral,Male,1,1,0,NA,Bad,Unknown,
+Brazil_507,Brazil,Feral,Female,0,0,1,NA,Unknown,Adult,
+Brazil_508,Brazil,Feral,Male,1,0,0,NA,Unknown,Adult,
+Brazil_509,Brazil,Domestic,Female,0,0,0,NA,Healthy,Unknown,
+Brazil_510,Brazil,Domestic,Female,1,0,0,NA,Healthy,5 years,
+Brazil_511,Brazil,Domestic,Male,0,0,1,NA,Unknown,1 year,seguila neurologica
+Brazil_512,Brazil,Domestic,Male,0,0,1,NA,Healthy,3 years,paraplogico bipede
+Brazil_513,Brazil,Domestic,Male,0,0,0,NA,Healthy,7 years,FeLV+
+Brazil_514,Brazil,Domestic,Male,0,0,0,NA,Healthy,8 years,seguila neurologica
+Brazil_515,Brazil,Domestic,Female,0,0,0,0,Healthy,6 years,
+Brazil_516,Brazil,Domestic,Female,0,0,0,0,Healthy,6 years,
+CaboVerde_501,CaboVerde,Domestic,Male,0,0,0,0,Healthy,2 years,
+CaboVerde_502,CaboVerde,Domestic,Female,0,0,0,0,Healthy,1 year,
+CaboVerde_503,CaboVerde,Domestic,Male,0,0,0,0,Healthy,5 months,
+CaboVerde_504,CaboVerde,Domestic,Female,0,0,0,0,Healthy,1 year,
+CaboVerde_505,CaboVerde,Domestic,Female,0,0,0,0,Healthy,2 years,
+CaboVerde_506,CaboVerde,Domestic,Male,0,1,1,NA,Healthy,5 years,Pregnant/nursing..... but male?
+CaboVerde_507,CaboVerde,Domestic,Male,0,1,0,0,Healthy,3 years,
+CaboVerde_508,CaboVerde,Domestic,Male,0,0,0,0,Healthy,2 years,
+CaboVerde_509,CaboVerde,Domestic,Male,0,0,0,0,Healthy,9 months,
+CaboVerde_510,CaboVerde,Domestic,Female,0,0,0,0,Healthy,10 months,
+CaboVerde_511,CaboVerde,Domestic,Male,0,0,1,0,Healthy,9 months,
+CaboVerde_512,CaboVerde,Domestic,Female,0,0,0,0,Healthy,8 years,
+CaboVerde_513,CaboVerde,Feral,Female,0,0,0,0,Healthy,1 year,Pregnant/Nursing
+CaboVerde_514,CaboVerde,Feral,Female,0,0,0,0,Matted,3 years,
+CaboVerde_515,CaboVerde,Feral,Male,0,0,0,0,Unknown,4 years,
+Denmark_10,Denmark,Feral,Unknown,0,1,0,NA,Unknown,Unknown,
+Denmark_11,Denmark,Feral,Unknown,0,1,1,1,Unknown,Unknown,
+Denmark_12,Denmark,Domestic,Unknown,0,1,0,1,Unknown,Unknown,
+Denmark_13,Denmark,Domestic,Female,0,0,0,0,Unknown,Unknown,
+Denmark_14,Denmark,Domestic,Unknown,0,0,0,0,Bad,Unknown,
+Denmark_15,Denmark,Feral,Unknown,0,0,1,NA,Unknown,Unknown,
+Denmark_1,Denmark,Domestic,Unknown,0,0,0,NA,Unknown,Unknown,Pregnant
+Denmark_2,Denmark,Feral,Unknown,0,1,0,NA,Unknown,Unknown,
+Denmark_3,Denmark,Feral,Unknown,0,0,1,NA,Bad,Unknown,
+Denmark_4,Denmark,Feral,Unknown,0,0,0,NA,Unknown,Unknown,
+Denmark_5,Denmark,Domestic,Unknown,0,0,0,NA,Unknown,Unknown,
+Denmark_6,Denmark,Feral,Unknown,0,0,0,0,Unknown,Unknown,
+Denmark_7,Denmark,Feral,Unknown,1,1,0,NA,Unknown,Unknown,
+Denmark_8,Denmark,Feral,Unknown,1,0,0,0,Unknown,Unknown,
+Denmark_9,Denmark,Domestic,Unknown,0,0,0,NA,Unknown,Unknown,
+Malaysia_501,Malaysia,Domestic,Male,0,0,0,0,Healthy,1 year,Overweight
+Malaysia_502,Malaysia,Domestic,Female,0,0,0,NA,Healthy,1 year,
+Malaysia_503,Malaysia,Domestic,Male,0,0,0,0,Healthy,1 year,
+Malaysia_504,Malaysia,Domestic,Male,0,0,0,0,Healthy,6 months,
+Malaysia_505,Malaysia,Feral,Male,0,1,1,0,Unknown,2 years,
+Malaysia_506,Malaysia,Domestic,Male,0,0,0,0,Healthy,1.5 year,
+Malaysia_507,Malaysia,Domestic,Female,0,0,0,0,Healthy,1 year,
+Malaysia_508,Malaysia,Domestic,Female,0,0,0,0,Healthy,6 months,
+Malaysia_509,Malaysia,Domestic,Female,0,0,0,0,Healthy,1 year,
+Malaysia_510,Malaysia,Feral,Male,0,1,0,1,Healthy,6 months,
+Malaysia_511,Malaysia,Feral,Female,0,1,0,1,Healthy,1 year,Pregnant/nursing
+Malaysia_512,Malaysia,Feral,Female,0,1,0,1,Healthy,8 months,
+Malaysia_513,Malaysia,Feral,Male,1,0,0,1,Healthy,4 months,
+Malaysia_514,Malaysia,Feral,Female,1,1,1,1,Healthy,1 year,
+Malaysia_515,Malaysia,Feral,Female,0,1,1,1,Healthy,1 year,
+Spain_501,Spain,Domestic,Male,0,0,0,0,Healthy,1 year,scared
+Spain_502,Spain,Domestic,Female,0,0,0,0,Healthy,1 year,scared
+Spain_503,Spain,Feral,Female,1,0,0,1,Healthy,1.5 years,Lactating + scared
+Spain_504,Spain,Feral,Female,0,0,0,1,Healthy,1.5 years,Lactating + scared + mites in both ears
+Spain_505,Spain,Domestic,Female,0,0,0,0,Healthy,7 years,Lactating
+Spain_506,Spain,Domestic,Female,0,0,0,0,Healthy,9 months,scared
+Spain_507,Spain,Feral,Male,0,1,0,1,Healthy,2 years,
+Spain_508,Spain,Domestic,Female,0,1,0,0,Healthy,6 months,Hisses in clinic but is sociable at home
+Spain_509,Spain,Feral,Female,0,0,0,1,Healthy,8 years,scared
+Spain_510,Spain,Domestic,Female,0,0,0,0,Healthy,1 year,scared
+Spain_511,Spain,Feral,Female,1,1,0,1,Healthy,1 year,scared + wound on nose from trying to escape cage
+Spain_512,Spain,Feral,Female,0,0,0,1,Unknown,4 years,scared + lactating + ear mites and ear dermatitis
+Spain_514,Spain,Domestic,Male,0,0,0,0,Healthy,1 year,
+Spain_515,Spain,Feral,Male,0,1,0,1,Healthy,1 year,Ear issues
+Spain_516,Spain,Domestic,Female,0,0,0,0,Healthy,13 months,scared

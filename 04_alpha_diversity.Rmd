@@ -1,8 +1,10 @@
 # Alpha diversity
 
-```{r load_data_alpha}
+```{r load_data_alpha, echo=FALSE}
 load("data/data.Rdata")
 ```
+
+## Hill numbers
 
 ```{r alpha_div, comment="", message=FALSE, warning=FALSE}
 # Calculate Hill numbers
@@ -115,7 +117,8 @@ alpha_div %>%
 
 ### Mixed models 
 
-***Richness***
+#### Richness
+
 ```{r model_rich, comment="", echo=FALSE, message=FALSE, warning=FALSE}
 library(MASS)
 alpha_div_meta <- alpha_div %>%
@@ -127,7 +130,8 @@ emmeans(Modelq0_Loca, pairwise ~ location)
 detach("package:MASS", unload = TRUE)
 ```
 
-***Neutral***
+#### Neutral
+
 ```{r model_neutral, comment="", message=FALSE, warning=FALSE}
 Modelq1_Loca <- lm(formula = neutral ~ location, data = alpha_div_meta) 
 anova(Modelq1_Loca)
@@ -135,7 +139,8 @@ r.squaredGLMM(Modelq1_Loca)
 emmeans(Modelq1_Loca, pairwise ~ location)
 ```
 
-***Phylogenetic***
+#### Phylogenetic
+
 ```{r model_phylo, comment="", message=FALSE, warning=FALSE}
 Modelq1p_Loca <- lm(formula = phylogenetic ~ location, data = alpha_div_meta) 
 anova(Modelq1p_Loca)
@@ -143,7 +148,8 @@ r.squaredGLMM(Modelq1p_Loca)
 emmeans(Modelq1p_Loca, pairwise ~ location)
 ```
 
-***Functional***
+#### Functional
+
 ```{r model_funct, comment="", message=FALSE, warning=FALSE}
 Modelq1F_Loca <- lm(formula = functional ~ location, data = alpha_div_meta) 
 anova(Modelq1F_Loca)
@@ -152,9 +158,10 @@ emmeans(Modelq1F_Loca, pairwise ~ location)
 ```
 
 ## By behaviour and location
+
 ### Plots
 
-***Richness***
+#### Richness
 
 ```{r alpha_div_rich_boxplot, comment="", message=FALSE, warning=FALSE, fig.height=3, fig.width=10, fig.fullwidth=TRUE}
 alpha_div %>%
@@ -179,7 +186,8 @@ alpha_div %>%
       )
 ```
 
-***Neutral***
+#### Neutral
+
 ```{r alpha_div_neutral_boxplot, comment="", message=FALSE, warning=FALSE, fig.height=3, fig.width=10, fig.fullwidth=TRUE}
 #pdf("figures/alpha_q1n_behaviour.pdf",width=9, height=5)
 alpha_div %>%
@@ -205,7 +213,8 @@ alpha_div %>%
 #dev.off()
 ```
 
-***Phylogenetic***
+#### Phylogenetic
+
 ```{r alpha_div_phylo_boxplot, comment="", message=FALSE, warning=FALSE, fig.height=3, fig.width=10, fig.fullwidth=TRUE}
 
 #pdf("figures/alpha_q1p_behaviour.pdf",width=9, height=5)
@@ -232,7 +241,8 @@ alpha_div %>%
 #dev.off()
 ```
 
-***Functional***
+#### Functional
+
 ```{r alpha_div_func_boxplot, comment="", message=FALSE, warning=FALSE, fig.height=3, fig.width=10, fig.fullwidth=TRUE}
 
 alpha_div %>%
@@ -259,27 +269,31 @@ alpha_div %>%
 
 ### Mixed models 
 
-***Richness***
+#### Richness
+
 ```{r}
 Model_richness <- glmer.nb(richness ~ origin+sex+(1|location), data = alpha_div_meta)
 summary(Model_richness)
 ```
 
-***Neutral***
+#### Neutral
+
 ```{r}
 Model_neutral <- lme(fixed = neutral ~ origin+sex, data = alpha_div_meta,
                random = ~ 1 | location)#log(seq_depth)+
 summary(Model_neutral)
 ```
 
-***Phylogenetic***
+#### Phylogenetic
+
 ```{r}
 Model_phylo <- lme(fixed = phylogenetic ~ origin+sex, data = alpha_div_meta,
                random = ~ 1 | location)
 summary(Model_phylo)
 ```
 
-***Functional***
+#### Functional
+
 ```{r}
 Model_func <- lme(fixed = functional ~ origin+sex, data = alpha_div_meta,
                random = ~ 1 | location)

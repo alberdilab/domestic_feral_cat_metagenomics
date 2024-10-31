@@ -1,0 +1,86 @@
+# (PART) Cat behaviour analysis {-}
+
+# Behavioural differences
+
+```{r load_data_behaviour, echo=FALSE}
+load("data/data.Rdata")
+```
+
+## Behavioral index
+
+Index that aggregates bites, hisses, retreats and avoidance traits into a single continuous scale ranging between 0 (tame) and 1 (aggressive). 
+
+```{r index_overview, message=FALSE, warning=FALSE, fig.height=4, fig.width=10, fig.fullwidth=TRUE}
+sample_metadata %>% 
+        rowwise() %>%
+        mutate(behaviour = sum(c_across(c(bites, hisses,retreats,avoidance))/4, na.rm = TRUE)) %>%
+        ungroup() %>% 
+        mutate(sex = factor(sex)) %>% 
+        dplyr::select(origin,behaviour) %>% 
+        ggplot(aes(x=origin,y=behaviour,group=origin)) + 
+            geom_dotplot(binaxis='y', 
+               stackdir='center', 
+               dotsize = .4,
+               fill="grey") + 
+        theme_classic()
+```
+
+## Bites
+
+```{r bites_test}
+sample_metadata %>% 
+    select(origin, bites) %>% 
+    group_by(origin, bites) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    pivot_wider(names_from = bites, values_from = count, values_fill = 0) %>%
+    rename(NoBites = `0`, Bites = `1`) %>% 
+    select(NoBites, Bites) %>%
+    as.matrix() %>% 
+    chisq.test() %>% 
+    tidy()
+```
+
+## Hisses
+
+```{r hisses_test}
+sample_metadata %>% 
+    select(origin, hisses) %>% 
+    group_by(origin, hisses) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    pivot_wider(names_from = hisses, values_from = count, values_fill = 0) %>%
+    rename(NoHisses = `0`, Hisses = `1`) %>% 
+    select(NoHisses, Hisses) %>%
+    as.matrix() %>% 
+    chisq.test() %>% 
+    tidy()
+```
+
+## Retreats
+
+```{r retreats_test}
+sample_metadata %>% 
+    select(origin, retreats) %>% 
+    group_by(origin, retreats) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    pivot_wider(names_from = retreats, values_from = count, values_fill = 0) %>%
+    rename(NoRetreats = `0`, Retreats = `1`) %>% 
+    select(NoRetreats, Retreats) %>%
+    as.matrix() %>% 
+    chisq.test() %>% 
+    tidy()
+```
+
+## Fear
+
+```{r fear_test}
+sample_metadata %>% 
+    select(origin, avoidance) %>% 
+    group_by(origin, avoidance) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    pivot_wider(names_from = avoidance, values_from = count, values_fill = 0) %>%
+    rename(NoAvoidance = `0`, Avoidance = `1`) %>% 
+    select(NoAvoidance, NoAvoidance) %>%
+    as.matrix() %>% 
+    chisq.test() %>% 
+    tidy()
+```

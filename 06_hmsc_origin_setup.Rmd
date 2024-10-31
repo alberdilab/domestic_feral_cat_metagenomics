@@ -1,0 +1,202 @@
+# (PART) Cat origin analysis {-}
+
+# HMSC Setup
+
+```{r load_data_hmsc_origin_setup, echo=FALSE}
+load("data/data.Rdata")
+```
+
+## Generate input objects
+
+```{r hmsc_origin_input, warning=FALSE, comments="", message=FALSE}
+# Random effects data (study design)
+StudyDesign <- sample_metadata %>%
+                    dplyr::select(sample,location) %>% 
+                    column_to_rownames("sample") %>% 
+                    mutate(location = factor(location))
+
+# Genome count table (quantitative community data)
+YData <- read_counts %>% 
+                    mutate(across(where(is.numeric), ~ . +1 )) %>% #add +1 pseudocount to remove zeros
+                    mutate(across(where(is.numeric), ~ . / (genome_metadata$length / 150) )) %>% #transform to genome counts
+                    mutate(across(where(is.numeric), ~  log(.) )) %>% #log-transform
+                    arrange(genome) %>%
+                    column_to_rownames("genome") %>% 
+                    dplyr::select(all_of(row.names(StudyDesign))) %>%  #filter only faecal samples
+                    as.data.frame() %>%
+                    t() # transpose
+
+# Fixed effects data (explanatory variables)
+XData <- sample_metadata %>% 
+                    column_to_rownames("sample") %>% 
+                    mutate(logseqdepth=read_counts %>% #total log-sequencing depth
+                        dplyr::select(all_of(row.names(StudyDesign))) %>% 
+                        colSums() %>% 
+                        log()
+                    ) %>% 
+                    mutate(origin = factor(origin)) %>%
+                    mutate(sex = factor(sex)) %>% 
+                    dplyr::select(origin, sex, logseqdepth)
+
+# Genome phylogeny
+PData <- genome_tree
+```
+
+## Define formulas of the Hmsc model
+
+```{r hmsc_origin_formulas, warning=FALSE, comments="", message=FALSE}
+# Fixed effects formula
+XFormula = ~origin + sex + logseqdepth
+
+# Study design
+rL.location = HmscRandomLevel(units = levels(StudyDesign$location))
+```
+
+## Define and Hmsc models
+
+```{r hmsc_origin_models, warning=FALSE, comments="", message=FALSE}
+#Define models
+model1 = Hmsc(Y=YData,
+         XData = XData, 
+         XFormula = XFormula,
+         studyDesign = StudyDesign,
+         phyloTree = PData, 
+         ranLevels=list("location"=rL.location),
+         distr = "normal",
+         YScale = TRUE)
+
+#Save list of models as an R object.
+model_list = list(model1=model1)
+if (!dir.exists("hmsc_origin")){dir.create("hmsc_origin")}
+save(model_list, file = "hmsc_origin/hmsc.Rdata")
+```
+
+Upload **hmsc/hmsc.Rdata** to the HPC respecting the directory structure.
+
+## Define MCMC
+
+```{r hmsc_origin_mcmc, warning=FALSE, comments="", message=FALSE}
+# How often to sample the MCMC
+MCMC_samples_list = 250
+
+# The number of MCMC steps between each recording sample
+MCMC_thin_list = 10
+
+# The number of MCMC chains to use
+nChains = 4
+```
+
+## Generate Hmsc executables
+
+The next chunk generates shell files for every combination of model, MCMC samples and MCMM thinning, ready to be launched as SLURM jobs.
+
+```{r hmsc_origin_executables, warning=FALSE, comments="", message=FALSE}
+
+modelchains <- expand.grid(model = names(model_list), sample = MCMC_samples_list, thin = MCMC_thin_list)
+
+if (!dir.exists("hmsc_origin")){dir.create("hmsc_origin")}
+for(i in c(1:nrow(modelchains))){
+      modelname=as.character(modelchains[i,1])
+      sample=modelchains[i,2]
+      thin=modelchains[i,3]
+      executablename <- paste0("hmsc_origin/exe_",modelname,"_",sample,"_",thin,".sh")
+      fitname <- paste0("fit_",modelname,"_",sample,"_",thin,".Rdata")
+      convname <- paste0("conv_",modelname,"_",sample,"_",thin,".Rdata")
+      model <- paste0('model_list$',modelname)
+      psrf.beta.name <-  paste0("psrf.beta.",modelname,"_",sample,"_",thin)
+      psrf.gamma.name <-  paste0("psrf.gamma.",modelname,"_",sample,"_",thin)
+      psrf.rho.name <-  paste0("psrf.rho.",modelname,"_",sample,"_",thin)
+      jobname <- paste0("hmsc_",modelname,"_",sample,"_",thin)
+      minutes <- 1000
+      code <- sprintf("#!/bin/bash
+#SBATCH --job-name=%s                   # Job name
+#SBATCH --nodes=1
+#SBATCH --ntasks=4                      # Run on 4 CPUs
+#SBATCH --mail-user=antton.alberdi@sund.ku.dk
+#SBATCH --mem=96gb                      # Job memory request
+#SBATCH --time=%d                       # In minutes
+
+# Activate conda environment
+module load mamba/1.3.1
+source activate /maps/projects/mjolnir1/people/jpl786/AMAC001_fibre_trial/hmsc/hmsc_env
+
+# Run R script
+Rscript -e '
+library(tidyverse)
+library(Hmsc)
+# Load formulas and data
+load(\"hmsc.Rdata\")
+
+# Declare placeholders
+modelname = \"%s\"
+model = %s
+fitname = \"%s\"
+convname = \"%s\"
+sample = %d
+thin = %d
+nchains = %d
+
+# Run model fitting
+m = sampleMcmc(hM = model, 
+         samples = sample, 
+         thin = thin,
+         adaptNf=rep(ceiling(0.4*sample*thin),model$nr),
+         transient = ceiling(0.5*sample*thin),
+         nChains = nchains,
+         nParallel = nchains)
+
+# Run model cross-validation
+partition <- createPartition(m, nfolds = 5)
+cv <- computePredictedValues(m, partition=partition, nChains = 4)
+
+# Assess chain convergence
+mpost = convertToCodaObject(m, 
+      spNamesNumbers = c(T,F), 
+      covNamesNumbers = c(T,F),
+      Beta = TRUE,
+      Gamma = TRUE,
+      V = FALSE,
+      Sigma = FALSE,
+      Rho = TRUE,
+      Eta = FALSE,
+      Lambda = FALSE,
+      Alpha = FALSE,
+      Omega = FALSE,
+      Psi = FALSE,
+      Delta = FALSE) # Convert to CODA object
+
+# Fixed effects
+assign(paste0(\"psrf.beta.\", modelname,\"_\",sample,\"_\",thin), gelman.diag(mpost$Beta,multivariate=FALSE)$psrf)
+
+# Traits
+assign(paste0(\"psrf.gamma.\", modelname,\"_\",sample,\"_\",thin), gelman.diag(mpost$Gamma,multivariate=FALSE)$psrf)
+
+# Phylogeny
+assign(paste0(\"psrf.rho.\", modelname,\"_\",sample,\"_\",thin), gelman.diag(mpost$Rho,multivariate=FALSE)$psrf)
+
+# Write convergence data
+save(%s, %s, %s, file=convname)
+
+# Save model fit object
+save(m, cv, file=fitname)
+'
+", jobname, minutes, modelname, model, fitname, convname, sample, thin, nChains, psrf.beta.name, psrf.gamma.name, psrf.rho.name)
+      writeLines(code, executablename)
+    }
+```
+
+Upload the produced **hmsc/exe_XXXXX.sh** files to the HPC respecting the directory structure.
+
+## Fit Hmsc models (in Mjolnir HPC)
+
+Launch the SLURM jobs by using:
+
+```{sh, eval=FALSE}
+#Create and define tmpdir
+tmpdir="./tmp"
+mkdir -p "$tmpdir"
+export TMPDIR="$tmpdir"
+
+#Or launch them one by one only the ones you want to launch
+sbatch exe_model1_250_10.sh
+```
