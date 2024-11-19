@@ -1,0 +1,315 @@
+# Behaviour-origin congruence
+
+## Taxonomic congruence
+
+```{r congruence_taxonomy, warning=FALSE, comments="", message=FALSE}
+
+tame_domestic <- intersect(behaviour_tame$genome, origin_domestic$genome) %>% length()
+tame_feral <- intersect(behaviour_tame$genome, origin_feral$genome) %>% length()
+aggressive_domestic <- intersect(behaviour_aggresive$genome, origin_domestic$genome) %>% length()
+aggressive_feral <- intersect(behaviour_aggresive$genome, origin_feral$genome) %>% length()
+
+tibble(origin=c("domestic","feral"),aggressive=c(aggressive_domestic,aggressive_feral),tame=c(tame_domestic,tame_feral)) %>% 
+  tt()
+```
+
+### Tame - Domestic
+
+```{r congruence_taxonomy1, warning=FALSE, comments="", message=FALSE}
+behaviour_tame %>% 
+  filter(genome %in% intersect(behaviour_tame$genome, origin_domestic$genome)) %>%
+  tt()
+```
+
+### Tame - Feral
+
+```{r congruence_taxonomy2, warning=FALSE, comments="", message=FALSE}
+behaviour_tame %>% 
+  select(-value) %>%
+  filter(genome %in% intersect(behaviour_tame$genome, origin_feral$genome))
+``` 
+
+### Aggressive - Domestic
+
+```{r congruence_taxonomy3, warning=FALSE, comments="", message=FALSE}
+behaviour_aggresive %>% 
+  select(-value) %>%
+  filter(genome %in% intersect(behaviour_aggresive$genome, origin_domestic$genome)) %>%
+  tt()
+```
+
+### Aggressive - Feral
+
+```{r congruence_taxonomy4, warning=FALSE, comments="", message=FALSE}
+behaviour_aggresive %>% 
+  select(-value) %>%
+  filter(genome %in% intersect(behaviour_aggresive$genome, origin_feral$genome)) %>%
+  tt()
+```
+
+## Domestic - aggressive incongruence
+
+```{r domestic_aggressive cats, warning=FALSE, comments="", message=FALSE, eval=FALSE}
+domestic_aggressive <- sample_metadata %>% 
+        rowwise() %>%
+        mutate(behaviour = sum(c_across(c(bites, hisses,retreats,avoidance)), na.rm = TRUE)/4) %>%
+        ungroup() %>%
+        filter(origin == "Domestic" & behaviour > 0) %>%
+        pull(sample)
+
+domestic_tame <- sample_metadata %>% 
+        rowwise() %>%
+        mutate(behaviour = sum(c_across(c(bites, hisses,retreats,avoidance)), na.rm = TRUE)/4) %>%
+        ungroup() %>%
+        filter(origin == "Domestic" & behaviour == 0) %>%
+        pull(sample)
+
+focal_genomes <- behaviour_aggresive %>% 
+  filter(genome %in% intersect(behaviour_aggresive$genome, origin_domestic$genome))  %>% 
+  filter(family == "Megasphaeraceae") %>% 
+  pull(genome)
+
+
+phylo_samples <- sample_metadata %>% 
+    filter(sample %in% c(domestic_aggressive,domestic_tame)) %>% 
+    mutate(behaviour = case_when(
+    sample %in% domestic_aggressive ~ "aggresive",
+    sample %in% domestic_tame ~ "tame",
+    TRUE ~ NA_character_
+  )) %>% 
+    column_to_rownames("sample") %>% 
+    sample_data()
+
+phylo_genome <- genome_counts_filt %>% 
+     filter(genome %in% focal_genomes) %>% 
+     column_to_rownames("genome") %>% 
+     mutate_all(~ replace(., . == 0, 0.00001)) %>%
+      otu_table(., taxa_are_rows = TRUE)
+
+phylo_taxonomy <- genome_metadata %>% 
+     filter(genome %in% focal_genomes) %>% 
+     mutate(genome2=genome) %>% #create a pseudo genome name column
+     column_to_rownames("genome2") %>% 
+     dplyr::select(division,phylum,class,order,family,genus,species,genome) %>%
+     as.matrix() %>% 
+     tax_table()
+
+physeq_genome_filtered <- phyloseq(phylo_genome, phylo_taxonomy, phylo_samples)
+
+ancom_rand_output = ancombc2(data = physeq_genome_filtered, 
+                  assay_name = "counts",
+                  tax_level = NULL, #change to agglomerate analysis to a higher taxonomic range
+                  fix_formula = "behaviour", #fixed variable(s)
+#                  rand_formula = "(1|Individual)",
+                  p_adj_method = "holm", 
+                  pseudo_sens = TRUE,
+                  prv_cut = 0, 
+                  s0_perc = 0,
+                  group = NULL, 
+                  struc_zero = FALSE, 
+                  neg_lb = FALSE,
+                  alpha = 0.05, 
+                  n_cl = 2, 
+                  verbose = TRUE,
+                  global = FALSE, 
+                  pairwise = FALSE, 
+                  dunnet = FALSE, 
+                  trend = FALSE,
+                  iter_control = list(tol = 1e-5, max_iter = 20, verbose = FALSE),
+                  em_control = list(tol = 1e-5, max_iter = 100),
+                  lme_control = NULL,
+                  mdfdr_control = list(fwer_ctrl_method = "holm", B = 100), 
+                  trend_control = NULL)
+
+
+
+genome_counts_filt %>%
+  mutate_at(vars(-genome),~./sum(.)) %>% #apply TSS nornalisation
+  pivot_longer(-genome, names_to = "sample", values_to = "count") %>% #reduce to minimum number of columns
+  left_join(., genome_metadata, by = join_by(genome == genome)) %>% #append genome metadata
+  left_join(., sample_metadata, by = join_by(sample == sample)) %>% 
+  filter(genome %in% focal_genomes) %>% 
+  filter(sample %in% c(domestic_aggressive,domestic_tame)) %>% 
+  mutate(behaviour = case_when(
+    sample %in% domestic_aggressive ~ "aggresive",
+    sample %in% domestic_tame ~ "tame",
+    TRUE ~ NA_character_
+  )) %>% 
+  ggplot(aes(x=behaviour,y=count, group=behaviour, color=genome))+
+    geom_jitter()
+
+```
+
+## Functional
+
+```{r function_behaviour_origin_congruence, warning=FALSE, comments="", message=FALSE}
+
+aggressive_domestic <- intersect(positive_behaviour$trait,positive_origin$trait) %>% length()
+tame_domestic <- intersect(negative_behaviour$trait,positive_origin$trait) %>% length()
+aggressive_feral <- intersect(positive_behaviour$trait, negative_origin$trait) %>% length()
+tame_feral <- intersect(negative_behaviour$trait, negative_origin$trait) %>% length()
+
+tibble(origin=c("domestic","feral"),aggressive=c(aggressive_domestic,aggressive_feral),tame=c(tame_domestic,tame_feral)) %>% 
+  tt()
+```
+
+### Aggresive - Domestic
+
+```{r function_behaviour_origin_congruence1, warning=FALSE, comments="", message=FALSE}
+
+positive_behaviour %>% 
+  inner_join(positive_origin,by="trait")
+```
+
+### Tame - Domestic
+
+```{r function_behaviour_origin_congruence2, warning=FALSE, comments="", message=FALSE}
+negative_behaviour %>% 
+  inner_join(positive_origin,by="trait") 
+```
+
+### Aggresive - Feral
+
+```{r function_behaviour_origin_congruence3, warning=FALSE, comments="", message=FALSE}
+positive_behaviour %>% 
+  inner_join(negative_origin,by="trait") %>% 
+  tt()
+```
+
+### Tame - Feral
+
+```{r function_behaviour_origin_congruence4, warning=FALSE, comments="", message=FALSE}
+negative_behaviour %>% 
+  inner_join(negative_origin,by="trait")
+```
+
+## Functional contrast
+
+```{r functional_contrast, warning=FALSE, comments="", message=FALSE}
+aggressive_feral <- behaviour_aggresive %>% 
+  select(-value) %>%
+  filter(genome %in% intersect(behaviour_aggresive$genome, origin_feral$genome)) %>% 
+  pull(genome)
+
+aggresive_taxonomy <- behaviour_aggresive$genome
+aggresive_function <- positive_behaviour$trait
+
+tame_domestic <-behaviour_tame %>% 
+  filter(genome %in% intersect(behaviour_tame$genome, origin_domestic$genome)) %>%
+  pull(genome)
+
+tame_taxonomy <- behaviour_tame$genome
+tame_function <- negative_behaviour$trait
+
+genome_gifts %>% 
+  to.elements(., GIFT_db) %>% 
+    as.data.frame() %>%
+    rownames_to_column(var="genome") %>%
+    pivot_longer(!genome,names_to="trait",values_to="gift") %>%
+    filter(genome %in% c(aggresive_taxonomy,tame_taxonomy)) %>% 
+    mutate(taxonomy=ifelse(genome %in% aggresive_taxonomy,"aggressive","tame")) %>% 
+    filter(trait %in% (positive_behaviour %>% 
+    inner_join(negative_origin,by="trait") %>% pull(trait))) %>% 
+    mutate(functionid = substr(trait, 1, 3)) %>%
+    mutate(trait = case_when(
+      trait %in% GIFT_db$Code_element ~ GIFT_db$Element[match(trait, GIFT_db$Code_element)],
+      TRUE ~ trait
+    )) %>%
+    mutate(functionid = case_when(
+      functionid %in% GIFT_db$Code_function ~ GIFT_db$Function[match(functionid, GIFT_db$Code_function)],
+      TRUE ~ functionid
+    )) %>%
+    mutate(trait=factor(trait,levels=unique(GIFT_db$Element))) %>%
+    mutate(functionid=factor(functionid,levels=unique(GIFT_db$Function))) %>%
+    ggplot(aes(x=genome,y=trait,fill=gift)) +
+        geom_tile(colour="white", linewidth=0.2)+
+        scale_fill_gradientn(colours=rev(c("#d53e4f", "#f46d43", "#fdae61", "#fee08b", "#e6f598", "#abdda4", "#ddf1da")))+
+        facet_grid(. ~ taxonomy, scales="free",space="free") +
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+              strip.text.y = element_text(angle = 0)) + 
+        labs(y="Traits",x="Samples",fill="GIFT")
+```
+
+## Functional ordination 
+
+PCoA functional ordination with PCA loadings.
+
+```{r function_ordination_pcoa, message=FALSE, fig.height=8, fig.width=10, fig.fullwidth=TRUE}
+gift_pcoa <- genome_gifts %>%
+    to.elements(., GIFT_db) %>%
+    as.data.frame() %>%
+    vegdist(method="euclidean") %>%
+    pcoa()
+
+gift_pcoa_rel_eigen <- gift_pcoa$values$Relative_eig[1:10]
+
+
+# Get genome positions
+gift_pcoa_vectors <- gift_pcoa$vectors %>% #extract vectors
+  as.data.frame() %>% 
+  select(Axis.1,Axis.2) # keep the first 2 axes
+
+gift_pcoa_eigenvalues <- gift_pcoa$values$Eigenvalues[c(1,2)]
+
+gift_pcoa_gifts <- cov(genome_gifts, scale(gift_pcoa_vectors)) %*% diag((gift_pcoa_eigenvalues/(nrow(genome_gifts)-1))^(-0.5)) %>%
+  as.data.frame() %>% 
+  rename(Axis.1=1,Axis.2=2) %>% 
+  rownames_to_column(var="label") %>% 
+  #get function summary vectors
+  mutate(func=substr(label,1,5)) %>% 
+  group_by(func) %>% 
+  summarise(Axis.1=mean(Axis.1),
+            Axis.2=mean(Axis.2)) %>% 
+  rename(label=func) %>% 
+  filter(label %in% (positive_behaviour %>% 
+    inner_join(negative_origin,by="trait") %>% pull(trait)))
+
+```
+
+
+```{r function_ordination_pcoa_plot, message=FALSE, fig.height=8, fig.width=10, fig.fullwidth=TRUE}
+
+scale <- 15 # scale for vector loadings
+gift_pcoa_vectors %>% 
+  rownames_to_column(var="genome") %>% 
+  left_join(genome_metadata, by="genome") %>%
+  mutate(relation = case_when(genome %in% aggresive_taxonomy ~ "aggresive",
+                              genome %in% tame_taxonomy ~ "tame",
+                              TRUE ~ "neutral")) %>%
+  group_by(relation) %>%
+  mutate(x_cen = mean(Axis.1, na.rm = TRUE)) %>%
+  mutate(y_cen = mean(Axis.2, na.rm = TRUE)) %>%
+  ungroup() %>% 
+  mutate(phylum=ifelse(relation=="neutral","NA",phylum)) %>% 
+  ggplot() +
+      #genome positions
+      scale_color_manual(values=phylum_colors,na.value = "#EDEDED")+
+      geom_point(aes(x=Axis.1,y=Axis.2, color=phylum, size=length), alpha=0.9, shape=16) +
+      new_scale_color() +
+      scale_color_manual(values = c("aggresive" = "#949293", "tame" = "#7657A4")) + 
+      geom_segment(data = . %>% filter(relation != "neutral"),
+                   aes(x = x_cen, y = y_cen, xend = Axis.1, yend = Axis.2, color=relation), 
+                   alpha = 0.5) +      
+      new_scale_color() +
+      #loading positions
+      geom_segment(data=gift_pcoa_gifts, 
+                   aes(x=0, y=0, xend=Axis.1 * scale, yend=Axis.2 * scale),
+                    arrow = arrow(length = unit(0.3, "cm"), 
+                    type = "open", 
+                    angle = 25),
+                    linewidth = 0.5, 
+                    color = "black") +
+     #Primary and secondary scale adjustments
+     scale_x_continuous(name = paste0("PCoA1 (",round(gift_pcoa_rel_eigen[1]*100, digits = 2), " %)"),
+                      sec.axis = sec_axis(~ . / scale, name = "Loadings on PCoA1")
+            ) +
+     scale_y_continuous(name = paste0("PCoA2 (",round(gift_pcoa_rel_eigen[2]*100, digits = 2), " %)"),
+                      sec.axis = sec_axis(~ . / scale, name = "Loadings on PCoA2")
+            ) +
+    geom_label_repel(data = gift_pcoa_gifts,
+                     aes(label = label, x = Axis.1 * scale, y = Axis.2 * scale),
+                     segment.color = 'transparent') +
+    theme_minimal() + 
+    theme(legend.position = "none")
+
+```

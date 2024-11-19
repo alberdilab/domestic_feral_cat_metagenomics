@@ -224,12 +224,22 @@ beta_q1f$S %>%
 
 ```{r permanova_rich_behaviour, comment="", message=FALSE, warning=FALSE}
 betadisper(beta_q0n$S, sample_metadata$origin) %>% permutest(., pairwise=TRUE) 
+
+adonis2(beta_q0n$S ~ origin*location, 
+        data = sample_metadata %>% arrange(match(sample,labels(beta_q0n$S))), 
+        permutations = 999,
+        by = "terms") %>%
+        broom::tidy() %>%
+        tt()
+
 adonis2(beta_q0n$S ~ origin, 
         data = sample_metadata %>% arrange(match(sample,labels(beta_q0n$S))), 
         permutations = 999,
-        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$S))) %>% pull(location)) %>%
+        by = "terms",
+        strata = sample_metadata %>% arrange(match(sample,labels(beta_q0n$S))) %>% pull(location)) %>%
         broom::tidy() %>%
         tt()
+
 pairwise.adonis(beta_q0n$S, sample_metadata$origin, perm = 999)
 ```
 
@@ -265,12 +275,22 @@ beta_q0n$S %>%
 
 ```{r permanova_neutral_behaviour, comment="", message=FALSE, warning=FALSE}
 betadisper(beta_q1n$S, sample_metadata$origin) %>% permutest(., pairwise=TRUE) 
+
+adonis2(beta_q1n$S ~ origin*location, 
+        data = sample_metadata %>% arrange(match(sample,labels(beta_q1n$S))), 
+        permutations = 999,
+        by = "terms") %>%
+        broom::tidy() %>%
+        tt()
+
 adonis2(beta_q1n$S ~ origin, 
         data = sample_metadata %>% arrange(match(sample,labels(beta_q1n$S))), 
         permutations = 999,
+        by = "terms",
         strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$S))) %>% pull(location)) %>%
         broom::tidy() %>%
         tt()
+
 pairwise.adonis(beta_q1n$S, sample_metadata$origin, perm = 999)
 ```
 
@@ -308,12 +328,22 @@ dev.off()
 
 ```{r permanova_phylo_behaviour, comment="", message=FALSE, warning=FALSE}
 betadisper(beta_q1p$S, sample_metadata$origin) %>% permutest(., pairwise=TRUE) 
+
+adonis2(beta_q1p$S ~ origin*location, 
+        data = sample_metadata %>% arrange(match(sample,labels(beta_q1p$S))), 
+        permutations = 999,
+        by = "terms") %>%
+        broom::tidy() %>%
+        tt()
+
 adonis2(beta_q1p$S ~ origin, 
         data = sample_metadata %>% arrange(match(sample,labels(beta_q1p$S))), 
         permutations = 999,
-        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$S))) %>% pull(location)) %>%
+        by = "terms",
+        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1p$S))) %>% pull(location)) %>%
         broom::tidy() %>%
         tt()
+
 pairwise.adonis(beta_q1p$S, sample_metadata$origin, perm = 999)
 ```
 
@@ -349,14 +379,23 @@ beta_q1p$S %>%
 
 ```{r permanova_func_behaviour, comment="", message=FALSE, warning=FALSE}
 betadisper(beta_q1f$S, sample_metadata$origin) %>% permutest(., pairwise=TRUE) 
-adonis2(beta_q1f$S ~ origin, 
+
+adonis2(beta_q1f$S ~ origin*location, 
         data = sample_metadata %>% arrange(match(sample,labels(beta_q1f$S))), 
         permutations = 999,
-        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1n$S))) %>% pull(location)) %>%
+        by = "terms") %>%
         broom::tidy() %>%
         tt()
-pairwise.adonis(beta_q1f$S, sample_metadata$origin, perm = 999)
 
+adonis2(beta_q1p$S ~ origin, 
+        data = sample_metadata %>% arrange(match(sample,labels(beta_q1f$S))), 
+        permutations = 999,
+        by = "terms",
+        strata = sample_metadata %>% arrange(match(sample,labels(beta_q1f$S))) %>% pull(location)) %>%
+        broom::tidy() %>%
+        tt()
+
+pairwise.adonis(beta_q1f$S, sample_metadata$origin, perm = 999)
 ```
 
 ```{r beta_div_nmds_func_plot_behaviour, comment="", message=FALSE, warning=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}

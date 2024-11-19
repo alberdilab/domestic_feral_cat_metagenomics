@@ -238,6 +238,63 @@ inner_join(estimate,support,by=join_by(genome==genome)) %>%
       xlim(c(-0.4,0.4)) +
       labs(x = "Beta regression coefficient", y = "Posterior probability") +
       theme_minimal()
+
+```
+```{r taxonomy_behaviour_all, warning=FALSE, comments="", message=FALSE}
+estimate_quantiles <- getPostEstimate(hM=m, parName="Beta", q=c(0.1,0.9))$q
+
+map_dfr(1:229, ~ {
+  tibble(
+    q10 = estimate_quantiles[1, 2, .x], # Extract 10% quantile
+    q90 = estimate_quantiles[2, 2, .x]  # Extract 90% quantile
+  )
+}) %>% mutate(genome=estimate$genome) %>% 
+  right_join(estimate, by="genome") %>% 
+  left_join(genome_metadata, by="genome") %>% 
+  filter(q10>0 | q90<0) %>% 
+  ggplot(aes(x=mean, y=fct_reorder(genome, mean), xmin=q10, xmax=q90, color=phylum)) +
+      geom_point() +
+      geom_errorbar() +
+      #xlim(c(-0.03,0.04)) +
+      geom_vline(xintercept=0) +
+      scale_color_manual(values = phylum_colors) +
+      theme_minimal() +
+      labs(x="Regression coefficient",y="Functional trait") +
+      theme(legend.position="none")
+
+```
+
+```{r taxonomy_behaviour_top, warning=FALSE, comments="", message=FALSE}
+estimate_top <- estimate %>% 
+  arrange(desc(mean)) %>%                
+  slice_head(n = 15) %>%                      
+  bind_rows(                                  
+    estimate %>%
+      arrange(mean) %>%                      
+      slice_head(n = 15))
+
+estimate_top_significant <-map_dfr(1:229, ~ {
+  tibble(
+    q10 = estimate_quantiles[1, 2, .x], # Extract 10% quantile
+    q90 = estimate_quantiles[2, 2, .x]  # Extract 90% quantile
+  )
+}) %>% mutate(genome=estimate$genome) %>% 
+  right_join(estimate_top, by="genome") %>% 
+  left_join(genome_metadata, by="genome") %>% 
+  filter(q10>0 | q90<0) %>%
+  arrange(mean)
+
+estimate_top_significant %>% 
+  ggplot(aes(x=mean, y=fct_reorder(genome, mean), xmin=q10, xmax=q90, color=phylum)) +
+      geom_point() +
+      geom_errorbar() +
+      scale_y_discrete(labels = estimate_top_significant$genus) +
+      geom_vline(xintercept=0) +
+      scale_color_manual(values = phylum_colors[-c(6,7)]) +
+      theme_minimal() +
+      labs(x="Regression coefficient",y="Functional trait") +
+      theme(legend.position="none")
+
 ```
 
 #### Associated with tame cats
@@ -254,8 +311,8 @@ behaviour_tame <- getPostEstimate(hM=m, parName="Beta")$support %>%
     filter(variable=="behaviour", trend=="Negative") %>%
     arrange(-value) %>%
     left_join(genome_metadata,by=join_by(genome==genome)) %>%
-    dplyr::select(genome,phylum,class,order,family,species,value) %>%
-    arrange(phylum, class, family, species)
+    dplyr::select(genome,phylum,class,order,family,genus, species,value) %>%
+    arrange(phylum, class, family, genus, species)
 
 behaviour_tame %>%
   arrange(value) %>% 
@@ -277,131 +334,15 @@ behaviour_aggresive <- getPostEstimate(hM=m, parName="Beta")$support %>%
     filter(variable=="behaviour", trend=="Positive") %>%
     arrange(value) %>%
     left_join(genome_metadata,by=join_by(genome==genome)) %>%
-    dplyr::select(genome,phylum,class,order,family,species,value) %>%
-    arrange(phylum,class,family,species)
+    dplyr::select(genome,phylum,class,order,family,genus,species,value) %>%
+    arrange(phylum,class,family,genus,species)
 
 behaviour_aggresive %>%
   arrange(-value) %>% 
   paged_table()
 
 ```
-## Behaviour-origin congruence
 
-```{r behaviour_origin_congruence, warning=FALSE, comments="", message=FALSE}
-
-tame_domestic <- intersect(behaviour_tame$genome, origin_domestic$genome) %>% length()
-tame_feral <- intersect(behaviour_tame$genome, origin_feral$genome) %>% length()
-aggressive_domestic <- intersect(behaviour_aggresive$genome, origin_domestic$genome) %>% length()
-aggressive_feral <- intersect(behaviour_aggresive$genome, origin_feral$genome) %>% length()
-
-tibble(origin=c("domestic","feral"),aggressive=c(aggressive_domestic,aggressive_feral),tame=c(tame_domestic,tame_feral)) %>% 
-  tt()
-
-behaviour_tame %>% 
-  filter(genome %in% intersect(behaviour_tame$genome, origin_domestic$genome)) %>%
-  paged_table()
-
-behaviour_aggresive %>% 
-  filter(genome %in% intersect(behaviour_aggresive$genome, origin_domestic$genome)) %>%
-  paged_table()
-
-behaviour_aggresive %>% 
-  filter(genome %in% intersect(behaviour_aggresive$genome, origin_feral$genome)) %>%
-  paged_table()
-```
-
-## Domestic & aggressive cats
-
-```{r domestic_aggressive cats, warning=FALSE, comments="", message=FALSE}
-domestic_aggressive <- sample_metadata %>% 
-        rowwise() %>%
-        mutate(behaviour = sum(c_across(c(bites, hisses,retreats,avoidance)), na.rm = TRUE)/4) %>%
-        ungroup() %>%
-        filter(origin == "Domestic" & behaviour > 0) %>%
-        pull(sample)
-
-domestic_tame <- sample_metadata %>% 
-        rowwise() %>%
-        mutate(behaviour = sum(c_across(c(bites, hisses,retreats,avoidance)), na.rm = TRUE)/4) %>%
-        ungroup() %>%
-        filter(origin == "Domestic" & behaviour == 0) %>%
-        pull(sample)
-
-focal_genomes <- behaviour_aggresive %>% 
-  filter(genome %in% intersect(behaviour_aggresive$genome, origin_domestic$genome))  %>% 
-  filter(family == "Megasphaeraceae") %>% 
-  pull(genome)
-
-
-phylo_samples <- sample_metadata %>% 
-    filter(sample %in% c(domestic_aggressive,domestic_tame)) %>% 
-    mutate(behaviour = case_when(
-    sample %in% domestic_aggressive ~ "aggresive",
-    sample %in% domestic_tame ~ "tame",
-    TRUE ~ NA_character_
-  )) %>% 
-    column_to_rownames("sample") %>% 
-    sample_data()
-
-phylo_genome <- genome_counts_filt %>% 
-     filter(genome %in% focal_genomes) %>% 
-     column_to_rownames("genome") %>% 
-     mutate_all(~ replace(., . == 0, 0.00001)) %>%
-      otu_table(., taxa_are_rows = TRUE)
-
-phylo_taxonomy <- genome_metadata %>% 
-     filter(genome %in% focal_genomes) %>% 
-     mutate(genome2=genome) %>% #create a pseudo genome name column
-     column_to_rownames("genome2") %>% 
-     dplyr::select(division,phylum,class,order,family,genus,species,genome) %>%
-     as.matrix() %>% 
-     tax_table()
-
-physeq_genome_filtered <- phyloseq(phylo_genome, phylo_taxonomy, phylo_samples)
-
-ancom_rand_output = ancombc2(data = physeq_genome_filtered, 
-                  assay_name = "counts",
-                  tax_level = NULL, #change to agglomerate analysis to a higher taxonomic range
-                  fix_formula = "behaviour", #fixed variable(s)
-#                  rand_formula = "(1|Individual)",
-                  p_adj_method = "holm", 
-                  pseudo_sens = TRUE,
-                  prv_cut = 0, 
-                  s0_perc = 0,
-                  group = NULL, 
-                  struc_zero = FALSE, 
-                  neg_lb = FALSE,
-                  alpha = 0.05, 
-                  n_cl = 2, 
-                  verbose = TRUE,
-                  global = FALSE, 
-                  pairwise = FALSE, 
-                  dunnet = FALSE, 
-                  trend = FALSE,
-                  iter_control = list(tol = 1e-5, max_iter = 20, verbose = FALSE),
-                  em_control = list(tol = 1e-5, max_iter = 100),
-                  lme_control = NULL,
-                  mdfdr_control = list(fwer_ctrl_method = "holm", B = 100), 
-                  trend_control = NULL)
-
-
-
-genome_counts_filt %>%
-  mutate_at(vars(-genome),~./sum(.)) %>% #apply TSS nornalisation
-  pivot_longer(-genome, names_to = "sample", values_to = "count") %>% #reduce to minimum number of columns
-  left_join(., genome_metadata, by = join_by(genome == genome)) %>% #append genome metadata
-  left_join(., sample_metadata, by = join_by(sample == sample)) %>% 
-  filter(genome %in% focal_genomes) %>% 
-  filter(sample %in% c(domestic_aggressive,domestic_tame)) %>% 
-  mutate(behaviour = case_when(
-    sample %in% domestic_aggressive ~ "aggresive",
-    sample %in% domestic_tame ~ "tame",
-    TRUE ~ NA_character_
-  )) %>% 
-  ggplot(aes(x=behaviour,y=count, group=behaviour, color=genome))+
-    geom_jitter()
-
-```
 
 ## Phylogenetic signal
 
@@ -533,23 +474,23 @@ element_predictions %>%
 ```
 
 ```{r hmsc_behaviour_significant_plot, warning=FALSE, comments="", message=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
-positive <- element_predictions %>%
+positive_behaviour <- element_predictions %>%
   filter(mean >0) %>%
   arrange(mean) %>%
   filter(positive_support>=0.9) %>%
   dplyr::select(-negative_support) %>%
   rename(support=positive_support)
 
-negative <- element_predictions %>%
+negative_behaviour <- element_predictions %>%
   filter(mean <0) %>%
   arrange(mean) %>%
   filter(negative_support>=0.9) %>%
   dplyr::select(-positive_support) %>%
   rename(support=negative_support)
 
-all_elements <- bind_rows(positive,negative) %>%
+all_elements <- bind_rows(positive_behaviour,negative_behaviour) %>%
   left_join(GIFT_db,by=join_by(trait==Code_element)) %>%
-  mutate(trait=factor(trait,levels=c(rev(positive$trait),rev(negative$trait)))) %>%
+  mutate(trait=factor(trait,levels=c(rev(positive_behaviour$trait),rev(negative_behaviour$trait)))) %>%
   mutate(Code_function=factor(Code_function)) %>%
   mutate(element_legend=str_c(trait," - ",Element)) %>%
   mutate(function_legend=str_c(Code_function," - ",Function)) %>%
@@ -564,11 +505,12 @@ all_elements %>%
   ggplot(aes(x=mean, y=fct_reorder(element_legend, mean), xmin=p1, xmax=p9, color=function_legend)) +
       geom_point() +
       geom_errorbar() +
-      xlim(c(-0.1,0.04)) +
+      xlim(c(-0.03,0.04)) +
       geom_vline(xintercept=0) +
       scale_color_manual(values = gift_colors$Color) +
       theme_minimal() +
-      labs(x="Regression coefficient",y="Functional trait")
+      labs(x="Regression coefficient",y="Functional trait") +
+      theme(legend.position="none")
 ```
 
 ### Function level

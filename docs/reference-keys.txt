@@ -101,8 +101,6 @@ model-fit-1
 posterior-estimates-1
 associated-with-tame-cats
 associated-with-aggresive-cats
-behaviour-origin-congruence
-domestic-aggressive-cats
 phylogenetic-signal-1
 microbiome-composition-predictions-1
 functional-predictions-1
@@ -110,3 +108,17 @@ element-level-1
 positive-associated-functions-at-element-level
 negatively-associated-functions-at-element-level-1
 function-level-1
+behaviour-origin-congruence
+taxonomic-congruence
+tame---domestic
+tame---feral
+aggressive---domestic
+aggressive---feral
+domestic---aggressive-incongruence
+functional-5
+aggresive---domestic
+tame---domestic-1
+aggresive---feral
+tame---feral-1
+functional-contrast
+functional-ordination-1

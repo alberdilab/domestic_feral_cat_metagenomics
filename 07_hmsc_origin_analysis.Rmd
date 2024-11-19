@@ -239,6 +239,63 @@ inner_join(estimate,support,by=join_by(genome==genome)) %>%
       theme_minimal()
 ```
 
+```{r taxonomy_origin_all, warning=FALSE, comments="", message=FALSE}
+estimate_quantiles <- getPostEstimate(hM=m, parName="Beta", q=c(0.1,0.9))$q
+
+map_dfr(1:229, ~ {
+  tibble(
+    q10 = estimate_quantiles[1, 2, .x], # Extract 10% quantile
+    q90 = estimate_quantiles[2, 2, .x]  # Extract 90% quantile
+  )
+}) %>% mutate(genome=estimate$genome) %>% 
+  right_join(estimate, by="genome") %>% 
+  left_join(genome_metadata, by="genome") %>% 
+  filter(q10>0 | q90<0) %>% 
+  ggplot(aes(x=mean, y=fct_reorder(genome, mean), xmin=q10, xmax=q90, color=phylum)) +
+      geom_point() +
+      geom_errorbar() +
+      #xlim(c(-0.03,0.04)) +
+      geom_vline(xintercept=0) +
+      scale_color_manual(values = phylum_colors) +
+      theme_minimal() +
+      labs(x="Regression coefficient",y="Functional trait") +
+      theme(legend.position="none")
+
+```
+
+```{r taxonomy_origin_top, warning=FALSE, comments="", message=FALSE}
+estimate_top <- estimate %>% 
+  arrange(desc(mean)) %>%                
+  slice_head(n = 15) %>%                      
+  bind_rows(                                  
+    estimate %>%
+      arrange(mean) %>%                      
+      slice_head(n = 15))
+
+estimate_top_significant <-map_dfr(1:229, ~ {
+  tibble(
+    q10 = estimate_quantiles[1, 2, .x], # Extract 10% quantile
+    q90 = estimate_quantiles[2, 2, .x]  # Extract 90% quantile
+  )
+}) %>% mutate(genome=estimate$genome) %>% 
+  right_join(estimate_top, by="genome") %>% 
+  left_join(genome_metadata, by="genome") %>% 
+  filter(q10>0 | q90<0) %>%
+  arrange(mean)
+
+estimate_top_significant %>% 
+  ggplot(aes(x=mean, y=fct_reorder(genome, mean), xmin=q10, xmax=q90, color=phylum)) +
+      geom_point() +
+      geom_errorbar() +
+      scale_y_discrete(labels = estimate_top_significant$genus) +
+      geom_vline(xintercept=0) +
+      scale_color_manual(values = phylum_colors[-c(5,7,9)]) +
+      theme_minimal() +
+      labs(x="Regression coefficient",y="Functional trait") +
+      theme(legend.position="none")
+
+```
+
 #### Associated with domestic cats
 
 ```{r hmsc_positive_origin, warning=FALSE, comments="", message=FALSE}
@@ -356,7 +413,7 @@ prediction %>%
       filter(enrichment != "Neutral") %>% 
       pivot_wider(names_from = origin, values_from = value) %>%
       unnest(c(domestic, feral)) %>%
-      mutate(diff_dom.feral = exp(domestic)/exp(feral)) %>%
+      mutate(diff_dom.feral = exp(feral)/exp(domestic)) %>%
       select(genome, diff_dom.feral) %>%
       left_join(genome_metadata_clean, by="genome") %>%
       mutate(genome= factor(genome, levels=genome_tree$tip.label)) %>%
@@ -449,23 +506,23 @@ element_predictions %>%
 ```
 
 ```{r hmsc_origin_significant_plot, warning=FALSE, comments="", message=FALSE, fig.height=7, fig.width=10, fig.fullwidth=TRUE}
-positive <- element_predictions %>%
+positive_origin <- element_predictions %>%
   filter(mean >0) %>%
   arrange(mean) %>%
   filter(positive_support>=0.9) %>%
   dplyr::select(-negative_support) %>%
   rename(support=positive_support)
 
-negative <- element_predictions %>%
+negative_origin <- element_predictions %>%
   filter(mean <0) %>%
   arrange(mean) %>%
   filter(negative_support>=0.9) %>%
   dplyr::select(-positive_support) %>%
   rename(support=negative_support)
 
-all_elements <- bind_rows(positive,negative) %>%
+all_elements <- bind_rows(positive_origin,negative_origin) %>%
   left_join(GIFT_db,by=join_by(trait==Code_element)) %>%
-  mutate(trait=factor(trait,levels=c(rev(positive$trait),rev(negative$trait)))) %>%
+  mutate(trait=factor(trait,levels=c(rev(positive_origin$trait),rev(negative_origin$trait)))) %>%
   mutate(Code_function=factor(Code_function)) %>%
   mutate(element_legend=str_c(trait," - ",Element)) %>%
   mutate(function_legend=str_c(Code_function," - ",Function)) %>%
@@ -477,14 +534,15 @@ gift_colors <- read_tsv("data/gift_colors.tsv") %>%
   filter(legend %in% all_elements$function_legend)
 
 all_elements %>%
-  ggplot(aes(x=mean, y=fct_reorder(element_legend, mean), xmin=p1, xmax=p9, color=function_legend)) +
+  ggplot(aes(x=-mean, y=fct_reorder(element_legend, -mean), xmin=-p1, xmax=-p9, color=function_legend)) +
       geom_point() +
       geom_errorbar() +
-      xlim(c(-0.1,0.04)) +
+      xlim(c(-0.04,0.12)) +
       geom_vline(xintercept=0) +
       scale_color_manual(values = gift_colors$Color) +
       theme_minimal() +
-      labs(x="Regression coefficient",y="Functional trait")
+      labs(x="Regression coefficient",y="Functional trait") +
+    theme(legend.position="none")
 ```
 
 ### Function level
@@ -573,10 +631,10 @@ gift_colors <- read_tsv("data/gift_colors.tsv") %>%
   filter(legend %in% all_functions$function_legend)
 
 all_functions %>%
-  ggplot(aes(x=mean, y=fct_reorder(function_legend, mean), xmin=p1, xmax=p9, color=function_legend)) +
+  ggplot(aes(x=-mean, y=fct_reorder(function_legend, -mean), xmin=-p1, xmax=-p9, color=function_legend)) +
       geom_point() +
       geom_errorbar() +
-      xlim(c(-0.12,0.05)) +
+      xlim(c(-0.05,0.12)) +
       geom_vline(xintercept=0) +
       scale_color_manual(values = gift_colors$Color) +
       theme_minimal() +
