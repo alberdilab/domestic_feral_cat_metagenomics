@@ -208,6 +208,7 @@ postestimates_tree <- gheatmap(postestimates_tree, post_beta, offset=0, width=0.
 postestimates_tree +
         vexpand(.25, 1) # expand top 
 ```
+
 ### Association with cat behaviour
 
 ```{r hmsc_support_plot_behaviour, warning=FALSE, comments="", message=FALSE}
@@ -259,7 +260,7 @@ map_dfr(1:229, ~ {
       geom_vline(xintercept=0) +
       scale_color_manual(values = phylum_colors) +
       theme_minimal() +
-      labs(x="Regression coefficient",y="Functional trait") +
+      labs(x="Regression coefficient",y="Bacterial genomes") +
       theme(legend.position="none")
 
 ```

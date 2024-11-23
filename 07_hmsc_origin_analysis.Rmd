@@ -258,7 +258,7 @@ map_dfr(1:229, ~ {
       geom_vline(xintercept=0) +
       scale_color_manual(values = phylum_colors) +
       theme_minimal() +
-      labs(x="Regression coefficient",y="Functional trait") +
+      labs(x="Regression coefficient",y="Bacterial genome") +
       theme(legend.position="none")
 
 ```

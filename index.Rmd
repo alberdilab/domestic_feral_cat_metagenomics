@@ -2,7 +2,7 @@
 title: "AlberdiLab | Aizpurua et al. 2024"
 subtitle: "Functional insights into the effect of feralisation on the gut microbiota of cats worldwide"
 author:
-  - Ostaizka Aizpurua , Amanda Bolt Botnen , Mr. Raphael A. Eisenhofer , Iñaki Odriozola , Luisa Santos-Bay , Mads Bjorn Bjornsen , Dr. Thomas Gilbert, Antton Alberdi^[University of Copenhagen, antton.alberdi@sund.ku.dk]
+  - Ostaizka Aizpurua, Amanda Bolt Botnen, Raphael A. Eisenhofer, Iñaki Odriozola, Luisa Santos-Bay, Mads Bjorn Bjornsen, M Thomas P Gilbert, Antton Alberdi^[University of Copenhagen, antton.alberdi@sund.ku.dk]
 date: "Last update: `r Sys.Date()`"
 site: bookdown::bookdown_site
 documentclass: book

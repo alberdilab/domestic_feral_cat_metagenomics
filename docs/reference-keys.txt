@@ -99,6 +99,7 @@ load-data-2
 variance-partitioning-1
 model-fit-1
 posterior-estimates-1
+association-with-cat-behaviour
 associated-with-tame-cats
 associated-with-aggresive-cats
 phylogenetic-signal-1
