@@ -3486,31 +3486,36 @@ color: #a52929;
 <span id="cb141-4"><a href="hmsc-setup.html#cb141-4" tabindex="-1"></a>                    <span class="fu">column_to_rownames</span>(<span class="st">&quot;sample&quot;</span>) <span class="sc">%&gt;%</span> </span>
 <span id="cb141-5"><a href="hmsc-setup.html#cb141-5" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="at">location =</span> <span class="fu">factor</span>(location))</span>
 <span id="cb141-6"><a href="hmsc-setup.html#cb141-6" tabindex="-1"></a></span>
-<span id="cb141-7"><a href="hmsc-setup.html#cb141-7" tabindex="-1"></a><span class="co"># Genome count table (quantitative community data)</span></span>
-<span id="cb141-8"><a href="hmsc-setup.html#cb141-8" tabindex="-1"></a>YData <span class="ot">&lt;-</span> read_counts <span class="sc">%&gt;%</span> </span>
-<span id="cb141-9"><a href="hmsc-setup.html#cb141-9" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> . <span class="sc">+</span><span class="dv">1</span> )) <span class="sc">%&gt;%</span> <span class="co">#add +1 pseudocount to remove zeros</span></span>
-<span id="cb141-10"><a href="hmsc-setup.html#cb141-10" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> . <span class="sc">/</span> (genome_metadata<span class="sc">$</span>length <span class="sc">/</span> <span class="dv">150</span>) )) <span class="sc">%&gt;%</span> <span class="co">#transform to genome counts</span></span>
-<span id="cb141-11"><a href="hmsc-setup.html#cb141-11" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span>  <span class="fu">log</span>(.) )) <span class="sc">%&gt;%</span> <span class="co">#log-transform</span></span>
-<span id="cb141-12"><a href="hmsc-setup.html#cb141-12" tabindex="-1"></a>                    <span class="fu">arrange</span>(genome) <span class="sc">%&gt;%</span></span>
-<span id="cb141-13"><a href="hmsc-setup.html#cb141-13" tabindex="-1"></a>                    <span class="fu">column_to_rownames</span>(<span class="st">&quot;genome&quot;</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb141-14"><a href="hmsc-setup.html#cb141-14" tabindex="-1"></a>                    dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="fu">all_of</span>(<span class="fu">row.names</span>(StudyDesign))) <span class="sc">%&gt;%</span>  <span class="co">#filter only faecal samples</span></span>
-<span id="cb141-15"><a href="hmsc-setup.html#cb141-15" tabindex="-1"></a>                    <span class="fu">as.data.frame</span>() <span class="sc">%&gt;%</span></span>
-<span id="cb141-16"><a href="hmsc-setup.html#cb141-16" tabindex="-1"></a>                    <span class="fu">t</span>() <span class="co"># transpose</span></span>
-<span id="cb141-17"><a href="hmsc-setup.html#cb141-17" tabindex="-1"></a></span>
-<span id="cb141-18"><a href="hmsc-setup.html#cb141-18" tabindex="-1"></a><span class="co"># Fixed effects data (explanatory variables)</span></span>
-<span id="cb141-19"><a href="hmsc-setup.html#cb141-19" tabindex="-1"></a>XData <span class="ot">&lt;-</span> sample_metadata <span class="sc">%&gt;%</span> </span>
-<span id="cb141-20"><a href="hmsc-setup.html#cb141-20" tabindex="-1"></a>                    <span class="fu">column_to_rownames</span>(<span class="st">&quot;sample&quot;</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb141-21"><a href="hmsc-setup.html#cb141-21" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="at">logseqdepth=</span>read_counts <span class="sc">%&gt;%</span> <span class="co">#total log-sequencing depth</span></span>
-<span id="cb141-22"><a href="hmsc-setup.html#cb141-22" tabindex="-1"></a>                        dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="fu">all_of</span>(<span class="fu">row.names</span>(StudyDesign))) <span class="sc">%&gt;%</span> </span>
-<span id="cb141-23"><a href="hmsc-setup.html#cb141-23" tabindex="-1"></a>                        <span class="fu">colSums</span>() <span class="sc">%&gt;%</span> </span>
-<span id="cb141-24"><a href="hmsc-setup.html#cb141-24" tabindex="-1"></a>                        <span class="fu">log</span>()</span>
-<span id="cb141-25"><a href="hmsc-setup.html#cb141-25" tabindex="-1"></a>                    ) <span class="sc">%&gt;%</span> </span>
-<span id="cb141-26"><a href="hmsc-setup.html#cb141-26" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="at">origin =</span> <span class="fu">factor</span>(origin)) <span class="sc">%&gt;%</span></span>
-<span id="cb141-27"><a href="hmsc-setup.html#cb141-27" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="at">sex =</span> <span class="fu">factor</span>(sex)) <span class="sc">%&gt;%</span> </span>
-<span id="cb141-28"><a href="hmsc-setup.html#cb141-28" tabindex="-1"></a>                    dplyr<span class="sc">::</span><span class="fu">select</span>(origin, sex, logseqdepth)</span>
-<span id="cb141-29"><a href="hmsc-setup.html#cb141-29" tabindex="-1"></a></span>
-<span id="cb141-30"><a href="hmsc-setup.html#cb141-30" tabindex="-1"></a><span class="co"># Genome phylogeny</span></span>
-<span id="cb141-31"><a href="hmsc-setup.html#cb141-31" tabindex="-1"></a>PData <span class="ot">&lt;-</span> genome_tree</span></code></pre></div>
+<span id="cb141-7"><a href="hmsc-setup.html#cb141-7" tabindex="-1"></a><span class="co">#Calculate normalisation factor to account for genome length</span></span>
+<span id="cb141-8"><a href="hmsc-setup.html#cb141-8" tabindex="-1"></a>normalisation_factor <span class="ot">&lt;-</span> genome_metadata <span class="sc">%&gt;%</span> </span>
+<span id="cb141-9"><a href="hmsc-setup.html#cb141-9" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">factor=</span><span class="fu">median</span>(length)<span class="sc">/</span>length) <span class="sc">%&gt;%</span></span>
+<span id="cb141-10"><a href="hmsc-setup.html#cb141-10" tabindex="-1"></a>  <span class="fu">pull</span>(factor)</span>
+<span id="cb141-11"><a href="hmsc-setup.html#cb141-11" tabindex="-1"></a></span>
+<span id="cb141-12"><a href="hmsc-setup.html#cb141-12" tabindex="-1"></a><span class="co"># Genome count table (quantitative community data)</span></span>
+<span id="cb141-13"><a href="hmsc-setup.html#cb141-13" tabindex="-1"></a>YData.red <span class="ot">&lt;-</span> read_counts  <span class="sc">%&gt;%</span></span>
+<span id="cb141-14"><a href="hmsc-setup.html#cb141-14" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> <span class="fu">round</span>(. <span class="sc">*</span> normalisation_factor,<span class="dv">0</span>) )) <span class="sc">%&gt;%</span> </span>
+<span id="cb141-15"><a href="hmsc-setup.html#cb141-15" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> . <span class="sc">+</span><span class="dv">1</span> )) <span class="sc">%&gt;%</span> <span class="co">#add +1 pseudocount to remove zeros</span></span>
+<span id="cb141-16"><a href="hmsc-setup.html#cb141-16" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span>  <span class="fu">log</span>(.) )) <span class="sc">%&gt;%</span> <span class="co">#log-transform</span></span>
+<span id="cb141-17"><a href="hmsc-setup.html#cb141-17" tabindex="-1"></a>                    <span class="fu">arrange</span>(genome) <span class="sc">%&gt;%</span></span>
+<span id="cb141-18"><a href="hmsc-setup.html#cb141-18" tabindex="-1"></a>                    <span class="fu">column_to_rownames</span>(<span class="st">&quot;genome&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb141-19"><a href="hmsc-setup.html#cb141-19" tabindex="-1"></a>                    dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="fu">all_of</span>(<span class="fu">row.names</span>(StudyDesign))) <span class="sc">%&gt;%</span>  <span class="co">#filter only faecal samples</span></span>
+<span id="cb141-20"><a href="hmsc-setup.html#cb141-20" tabindex="-1"></a>                    <span class="fu">as.data.frame</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb141-21"><a href="hmsc-setup.html#cb141-21" tabindex="-1"></a>                    <span class="fu">t</span>() <span class="co"># transpose</span></span>
+<span id="cb141-22"><a href="hmsc-setup.html#cb141-22" tabindex="-1"></a></span>
+<span id="cb141-23"><a href="hmsc-setup.html#cb141-23" tabindex="-1"></a><span class="co"># Fixed effects data (explanatory variables)</span></span>
+<span id="cb141-24"><a href="hmsc-setup.html#cb141-24" tabindex="-1"></a>XData <span class="ot">&lt;-</span> sample_metadata <span class="sc">%&gt;%</span> </span>
+<span id="cb141-25"><a href="hmsc-setup.html#cb141-25" tabindex="-1"></a>                    <span class="fu">column_to_rownames</span>(<span class="st">&quot;sample&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb141-26"><a href="hmsc-setup.html#cb141-26" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="at">logseqdepth=</span>read_counts <span class="sc">%&gt;%</span> <span class="co">#total log-sequencing depth</span></span>
+<span id="cb141-27"><a href="hmsc-setup.html#cb141-27" tabindex="-1"></a>                        dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="fu">all_of</span>(<span class="fu">row.names</span>(StudyDesign))) <span class="sc">%&gt;%</span> </span>
+<span id="cb141-28"><a href="hmsc-setup.html#cb141-28" tabindex="-1"></a>                        <span class="fu">colSums</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb141-29"><a href="hmsc-setup.html#cb141-29" tabindex="-1"></a>                        <span class="fu">log</span>()</span>
+<span id="cb141-30"><a href="hmsc-setup.html#cb141-30" tabindex="-1"></a>                    ) <span class="sc">%&gt;%</span> </span>
+<span id="cb141-31"><a href="hmsc-setup.html#cb141-31" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="at">origin =</span> <span class="fu">factor</span>(origin)) <span class="sc">%&gt;%</span></span>
+<span id="cb141-32"><a href="hmsc-setup.html#cb141-32" tabindex="-1"></a>                    <span class="fu">mutate</span>(<span class="at">sex =</span> <span class="fu">factor</span>(sex)) <span class="sc">%&gt;%</span> </span>
+<span id="cb141-33"><a href="hmsc-setup.html#cb141-33" tabindex="-1"></a>                    dplyr<span class="sc">::</span><span class="fu">select</span>(origin, sex, logseqdepth)</span>
+<span id="cb141-34"><a href="hmsc-setup.html#cb141-34" tabindex="-1"></a></span>
+<span id="cb141-35"><a href="hmsc-setup.html#cb141-35" tabindex="-1"></a><span class="co"># Genome phylogeny</span></span>
+<span id="cb141-36"><a href="hmsc-setup.html#cb141-36" tabindex="-1"></a>PData <span class="ot">&lt;-</span> genome_tree</span></code></pre></div>
 </div>
 <div id="define-formulas-of-the-hmsc-model" class="section level2 hasAnchor" number="7.2">
 <h2><span class="header-section-number">7.2</span> Define formulas of the Hmsc model<a href="hmsc-setup.html#define-formulas-of-the-hmsc-model" class="anchor-section" aria-label="Anchor link to header"></a></h2>

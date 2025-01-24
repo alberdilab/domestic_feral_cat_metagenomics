@@ -15,10 +15,15 @@ StudyDesign <- sample_metadata %>%
                     column_to_rownames("sample") %>% 
                     mutate(location = factor(location))
 
+#Calculate normalisation factor to account for genome length
+normalisation_factor <- genome_metadata %>% 
+  mutate(factor=median(length)/length) %>%
+  pull(factor)
+
 # Genome count table (quantitative community data)
-YData <- read_counts %>% 
+YData.red <- read_counts  %>%
+                    mutate(across(where(is.numeric), ~ round(. * normalisation_factor,0) )) %>% 
                     mutate(across(where(is.numeric), ~ . +1 )) %>% #add +1 pseudocount to remove zeros
-                    mutate(across(where(is.numeric), ~ . / (genome_metadata$length / 150) )) %>% #transform to genome counts
                     mutate(across(where(is.numeric), ~  log(.) )) %>% #log-transform
                     arrange(genome) %>%
                     column_to_rownames("genome") %>% 
